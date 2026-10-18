@@ -27,8 +27,9 @@ Attacks, each with a warning and a counter:
 It is the miniboss that guards the way down. At 35% health it unveils: its mask cracks open, its eye splits in
 three, and it mends back to full health. It also consumes your strength: every positive potion effect on nearby
 players is drained away into it. Each one makes it stronger (+5% damage and +1 armor, up to ten), and it keeps
-any Strength, Speed, Resistance, Regeneration, Absorption or Health Boost it takes for up to 30 seconds. Save your
-potions for after it unveils. From then on it hits harder, takes less damage, moves faster, and
+any Strength, Speed, Resistance, Regeneration, Absorption or Health Boost it takes for up to 30 seconds. It keeps
+feeding for the rest of the fight: any new effect on a player it can see within 24 blocks is drained too, so drink
+your potions behind cover. From then on it hits harder, takes less damage, moves faster, and
 attacks more often.
 
 - **False Sight:** two copies mirror its movement. Only the real one can hurt you, and only the real one has a

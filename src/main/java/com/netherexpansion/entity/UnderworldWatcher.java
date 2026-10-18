@@ -1,8 +1,10 @@
 package com.netherexpansion.entity;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -152,6 +154,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private static final double CONSUMED_DAMAGE_PER_STACK = 0.05;
 	private static final int STOLEN_DURATION_CAP = 600;
 	private static final int STOLEN_AMPLIFIER_CAP = 1;
+	private static final int CONSUME_INTERVAL = 20;
+	private static final double CONSUME_RANGE = 24.0;
+	private static final int DRAIN_STREAM_TICKS = 40;
 	private static final List<Holder<MobEffect>> STOLEN_EFFECTS = List.of(MobEffects.STRENGTH, MobEffects.SPEED,
 			MobEffects.RESISTANCE, MobEffects.REGENERATION, MobEffects.ABSORPTION, MobEffects.HEALTH_BOOST);
 
@@ -286,9 +291,11 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private ServerPlayer pendingExecution;
 	private ServerPlayer heldPlayer;
 	private float executionDamage;
+	/** Where the held player must stay: where they were caught, then the grab point at its hand. */
+	private Vec3 holdAnchor = Vec3.ZERO;
 	private float unveilStartHealth;
-	/** Players whose effects it consumed at the Unveiling, for the drain particles. */
-	private final List<Integer> drainedPlayers = new ArrayList<>();
+	/** Players it drained recently (entity ID to ticks of drain stream left). */
+	private final Map<Integer, Integer> drainedPlayers = new HashMap<>();
 	private int consumedStacks;
 
 	// Abyssal Collapse, Shadow Step and Shard Rain
@@ -455,6 +462,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		}
 		tickCooldowns();
 		bossEvent.setProgress(getHealth() / getMaxHealth());
+		keepConsuming(level);
+		drainStreams(level);
 		if (pendingExecution != null) {
 			startExecution();
 		}
@@ -895,7 +904,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 				addEffect(new MobEffectInstance(instance.getEffect(), duration, Math.min(instance.getAmplifier(), STOLEN_AMPLIFIER_CAP)));
 			}
 		}
-		drainedPlayers.add(player.getId());
+		drainedPlayers.put(player.getId(), DRAIN_STREAM_TICKS);
 		player.sendOverlayMessage(Component.translatable("message.netherexpansion.effects_consumed", taken.size()));
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.WATCHER_CONSUME, SoundSource.HOSTILE, 2.0F, 1.0F);
 	}
@@ -916,11 +925,37 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		}
 	}
 
-	/** Streams of light pulled out of each drained player into the Watcher's eye. */
+	/**
+	 * Once unveiled it keeps feeding: about once a second it drains any new positive effects from players within 24
+	 * blocks that it can see. Drinking behind cover is safe.
+	 */
+	private void keepConsuming(ServerLevel level) {
+		if (!isUnveiled() || getAction() == UNVEILING || tickCount % CONSUME_INTERVAL != 0) {
+			return;
+		}
+		int before = consumedStacks;
+		for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, getBoundingBox().inflate(CONSUME_RANGE))) {
+			if (distanceTo(player) <= CONSUME_RANGE && hasLineOfSight(player)) {
+				consumeBeneficialEffects(level, player);
+			}
+		}
+		if (consumedStacks != before) {
+			applyConsumedPower();
+		}
+	}
+
+	/** Streams of light pulled out of each drained player into the Watcher's eye, for two seconds after a drain. */
 	private void drainStreams(ServerLevel level) {
 		Vec3 eye = getEyePosition();
-		for (int id : drainedPlayers) {
-			if (!(level.getEntity(id) instanceof ServerPlayer player) || !player.isAlive()) {
+		var streams = drainedPlayers.entrySet().iterator();
+		while (streams.hasNext()) {
+			var stream = streams.next();
+			stream.setValue(stream.getValue() - 1);
+			if (stream.getValue() <= 0) {
+				streams.remove();
+				continue;
+			}
+			if (!(level.getEntity(stream.getKey()) instanceof ServerPlayer player) || !player.isAlive()) {
 				continue;
 			}
 			Vec3 from = player.position().add(0, player.getBbHeight() * 0.6, 0);
@@ -935,9 +970,6 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	}
 
 	private void tickUnveiling(ServerLevel level, LivingEntity target) {
-		if (actionTicks <= UNVEIL_SPLIT_TICK) {
-			drainStreams(level);
-		}
 		if (target != null) {
 			lookAtTarget(target, true);
 		}
@@ -1142,6 +1174,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		setAction(EXECUTE_APPROACH);
 		actionTicks = 0;
 		executionDamage = 0.0F;
+		holdAnchor = heldPlayer.position();
 		setSprinting(false);
 		entityData.set(DATA_HELD, heldPlayer.getId());
 		entityData.set(DATA_EXECUTE, 0);
@@ -1159,6 +1192,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			return;
 		}
 		lookAtTarget(player, true);
+		pinTo(player, holdAnchor);
 		if (distanceTo(player) <= 2.0) {
 			startHold(level, player);
 			return;
@@ -1193,6 +1227,21 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		player.connection.teleport(grab.x, grab.y, grab.z, yaw + 180.0F, -25.0F);
 		player.setDeltaMovement(Vec3.ZERO);
 		player.needsSync = true;
+		holdAnchor = grab;
+	}
+
+	/**
+	 * Keeps the held player at the anchor (the client also blocks their input; this is the server's backstop):
+	 * small drift is pulled back with velocity, anything larger is teleported back.
+	 */
+	private void pinTo(ServerPlayer player, Vec3 anchor) {
+		Vec3 offset = anchor.subtract(player.position());
+		if (offset.lengthSqr() > 0.09) {
+			player.connection.teleport(anchor.x, anchor.y, anchor.z, player.getYRot(), player.getXRot());
+		} else {
+			player.setDeltaMovement(offset);
+		}
+		player.needsSync = true;
 	}
 
 	/** It lifts them slowly while their screen fades (client), then the final squeeze. */
@@ -1203,8 +1252,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			return;
 		}
 		entityData.set(DATA_EXECUTE, actionTicks);
-		player.setDeltaMovement(0, actionTicks <= EXECUTE_LIFT_TICKS ? 0.025 : 0.0, 0);
-		player.needsSync = true;
+		pinTo(player, holdAnchor.add(0, Math.min(actionTicks, EXECUTE_LIFT_TICKS) * 0.025, 0));
 		if (actionTicks % 4 == 0) {
 			level.sendParticles(ModParticles.WATCHER_EMBER, player.getX(), player.getY() + 1.0, player.getZ(), 2, 0.3, 0.6, 0.3, 0.01);
 			level.sendParticles(ModParticles.VOID_MOTE, player.getX(), player.getY() + 1.4, player.getZ(), 2, 0.3, 0.4, 0.3, 0.01);

@@ -1,6 +1,7 @@
 package com.netherexpansion.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -22,6 +23,7 @@ public class NetherExpansionClient implements ClientModInitializer {
 		registerParticle(ModParticles.EYE_LIGHT, WatcherParticle.Kind.EYE_LIGHT);
 
 		HudElementRegistry.addLast(NetherExpansion.id("execution_fade"), ExecutionFadeOverlay::extract);
+		ClientTickEvents.END_CLIENT_TICK.register(ExecutionLock::tick);
 	}
 
 	private static void registerParticle(SimpleParticleType type, WatcherParticle.Kind kind) {

@@ -63,6 +63,12 @@ public class UnderworldWatcherRenderer<R extends LivingEntityRenderState & GeoRe
 		return 0.0F;
 	}
 
+	/** No vanilla tip-over on death: the death animation does all the moving (and would slide sideways if tipped). */
+	@Override
+	protected float getDeathMaxRotation(GeoRenderState renderState) {
+		return 0.0F;
+	}
+
 	@Override
 	public void adjustRenderPose(RenderPassInfo<R> renderPassInfo) {
 		super.adjustRenderPose(renderPassInfo);
