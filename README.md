@@ -25,7 +25,8 @@ Attacks, each with a warning and a counter:
   out there and slashes. Turn and step aside.
 
 It is the miniboss that guards the way down. At 35% health it unveils: its mask cracks open, its eye splits in
-three, and it mends back to full health. From then on it hits harder, takes less damage, moves faster, and
+three, and it mends back to full health. It also consumes your strength: every positive potion effect on nearby
+players is drained away into it, so save your potions for after it unveils. From then on it hits harder, takes less damage, moves faster, and
 attacks more often.
 
 - **False Sight:** two copies mirror its movement. Only the real one can hurt you, and only the real one has a

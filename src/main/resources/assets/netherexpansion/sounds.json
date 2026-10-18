@@ -834,5 +834,18 @@
 				"pitch": 0.6
 			}
 		]
+	},
+	"entity.underworld_watcher.consume": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.consume",
+		"sounds": [
+			{
+				"name": "minecraft:block/beacon/deactivate",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/conduit/deactivate",
+				"pitch": 0.5
+			}
+		]
 	}
 }

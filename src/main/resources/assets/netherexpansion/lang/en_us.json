@@ -35,5 +35,7 @@
 	"subtitles.netherexpansion.entity.underworld_watcher.collapse_charge": "The ground darkens around the Watcher",
 	"subtitles.netherexpansion.entity.underworld_watcher.collapse_boom": "The void collapses",
 	"subtitles.netherexpansion.entity.underworld_watcher.shard_call": "Underworld Watcher calls down shards",
-	"subtitles.netherexpansion.entity.underworld_watcher.shard_impact": "Shards crash down"
+	"subtitles.netherexpansion.entity.underworld_watcher.shard_impact": "Shards crash down",
+	"subtitles.netherexpansion.entity.underworld_watcher.consume": "Your strength is drained",
+	"message.netherexpansion.effects_consumed": "The Watcher consumes your strength"
 }

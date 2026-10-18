@@ -38,6 +38,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -277,6 +278,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private ServerPlayer heldPlayer;
 	private float executionDamage;
 	private float unveilStartHealth;
+	/** Players whose effects it consumed at the Unveiling, for the drain particles. */
+	private final List<Integer> drainedPlayers = new ArrayList<>();
 
 	// Abyssal Collapse, Shadow Step and Shard Rain
 	private int collapseCooldown;
@@ -825,7 +828,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		playSound(ModSounds.WATCHER_UNVEIL, 4.0F, 1.0F);
 		level.broadcastEntityEvent(this, UNVEIL_EVENT);
 		bossEvent.setVisible(true);
+		drainedPlayers.clear();
 		for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, getBoundingBox().inflate(48))) {
+			consumeBeneficialEffects(level, player);
 			player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 120), this);
 			player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 60, 20));
 			player.connection.send(new ClientboundSetSubtitleTextPacket(Component.translatable("boss.netherexpansion.underworld_watcher.unveiled")));
@@ -854,7 +859,49 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		return isUnveiled() ? damage * UNVEILED_DAMAGE : damage;
 	}
 
+	/**
+	 * It consumes the player's strength: every beneficial effect (Strength, Speed, Regeneration, Fire Resistance
+	 * and so on) is stripped away.
+	 */
+	private void consumeBeneficialEffects(ServerLevel level, ServerPlayer player) {
+		if (player.isSpectator() || player.isCreative()) {
+			return;
+		}
+		List<Holder<MobEffect>> taken = player.getActiveEffects().stream()
+				.map(MobEffectInstance::getEffect)
+				.filter(effect -> effect.value().isBeneficial())
+				.toList();
+		if (taken.isEmpty()) {
+			return;
+		}
+		taken.forEach(player::removeEffect);
+		drainedPlayers.add(player.getId());
+		player.sendOverlayMessage(Component.translatable("message.netherexpansion.effects_consumed"));
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.WATCHER_CONSUME, SoundSource.HOSTILE, 2.0F, 1.0F);
+	}
+
+	/** Streams of light pulled out of each drained player into the Watcher's eye. */
+	private void drainStreams(ServerLevel level) {
+		Vec3 eye = getEyePosition();
+		for (int id : drainedPlayers) {
+			if (!(level.getEntity(id) instanceof ServerPlayer player) || !player.isAlive()) {
+				continue;
+			}
+			Vec3 from = player.position().add(0, player.getBbHeight() * 0.6, 0);
+			Vec3 line = eye.subtract(from);
+			Vec3 pull = line.normalize();
+			for (int i = 0; i < 4; i++) {
+				Vec3 point = from.add(line.scale(random.nextDouble()));
+				level.sendParticles(i % 2 == 0 ? ModParticles.EYE_LIGHT : ModParticles.VOID_MOTE, point.x, point.y, point.z,
+						0, pull.x, pull.y, pull.z, 0.35);
+			}
+		}
+	}
+
 	private void tickUnveiling(ServerLevel level, LivingEntity target) {
+		if (actionTicks <= UNVEIL_SPLIT_TICK) {
+			drainStreams(level);
+		}
 		if (target != null) {
 			lookAtTarget(target, true);
 		}
