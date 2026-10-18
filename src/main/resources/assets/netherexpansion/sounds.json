@@ -722,5 +722,117 @@
 				"volume": 0.6
 			}
 		]
+	},
+	"entity.underworld_watcher.collapse_charge": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.collapse_charge",
+		"sounds": [
+			{
+				"name": "minecraft:block/respawn_anchor/charge1",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/charge2",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/charge3",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_charge1",
+				"pitch": 0.5,
+				"volume": 0.7
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_charge2",
+				"pitch": 0.5,
+				"volume": 0.7
+			}
+		]
+	},
+	"entity.underworld_watcher.collapse_boom": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.collapse_boom",
+		"sounds": [
+			{
+				"name": "minecraft:random/explode1",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:random/explode2",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:random/explode3",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:random/explode4",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom1",
+				"pitch": 0.5,
+				"volume": 0.7
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom2",
+				"pitch": 0.5,
+				"volume": 0.7
+			}
+		]
+	},
+	"entity.underworld_watcher.shard_call": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.shard_call",
+		"sounds": [
+			{
+				"name": "minecraft:block/amethyst/resonate1",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate2",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate3",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate4",
+				"pitch": 0.7
+			}
+		]
+	},
+	"entity.underworld_watcher.shard_impact": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.shard_impact",
+		"sounds": [
+			{
+				"name": "minecraft:block/amethyst_cluster/break1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break2",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break3",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break4",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/basalt/break1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/basalt/break2",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/basalt/break3",
+				"pitch": 0.6
+			}
+		]
 	}
 }

@@ -61,6 +61,7 @@ import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -102,6 +103,31 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	public static final int STAGGERED = 13;
 	public static final int EXECUTE_APPROACH = 14;
 	public static final int EXECUTE_HOLD = 15;
+	public static final int COLLAPSE = 16;
+	public static final int SHADOW_STEP = 17;
+	public static final int SHADOW_STRIKE = 18;
+	public static final int SHARD_RAIN = 19;
+
+	// Abyssal Collapse: a ring 7 blocks out opens around it and implodes after 1.5s
+	private static final int COLLAPSE_DETONATE_TICK = 30;
+	private static final int COLLAPSE_LENGTH = 45;
+	private static final double COLLAPSE_RADIUS = 7.0;
+	private static final DustParticleOptions COLLAPSE_RING = new DustParticleOptions(0x8A3CFF, 1.4F);
+
+	// Shadow Step: sinks (hidden from tick 10) while motes gather behind the player, steps out there at tick 15,
+	// and slashes 6 ticks later. Chains three strikes once unveiled.
+	private static final int STEP_HIDE_TICK = 10;
+	private static final int STEP_EMERGE_TICK = 15;
+	private static final int STRIKE_HIT_TICK = 6;
+	private static final int STRIKE_LENGTH = 12;
+
+	// Shard Rain: seven glowing circles appear around the player, shards land on them 1.1s later
+	private static final int SHARD_MARK_TICK = 8;
+	private static final int SHARD_IMPACT_TICK = 30;
+	private static final int SHARD_LENGTH = 50;
+	private static final int SHARD_COUNT = 7;
+	private static final double SHARD_RADIUS = 1.6;
+	private static final DustParticleOptions SHARD_MARK = new DustParticleOptions(0xD05AFF, 1.1F);
 
 	// The execution: walk up (giving up after 3s and stepping out of a rift instead), then hold for 3.2s.
 	// The hold stays under 80 ticks, after which a dedicated server would kick a player for floating.
@@ -117,7 +143,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private static final float UNVEIL_HEALTH = 0.35F;
 	private static final byte UNVEIL_EVENT = 100;
 	private static final Identifier UNVEILED_POWER = NetherExpansion.id("unveiled_power");
-	private static final float UNVEILED_DAMAGE = 1.35F;
+	private static final float UNVEILED_DAMAGE = 1.5F;
 
 	private static final EntityDataAccessor<Integer> DATA_PHASE = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> DATA_ACTION = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
@@ -208,6 +234,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private static final RawAnimation UNBLINKING_ANIM = RawAnimation.begin().thenLoop("unblinking");
 	private static final RawAnimation UNBLINKING_FIRE_ANIM = RawAnimation.begin().thenPlay("unblinking_fire");
 	private static final RawAnimation EXECUTE_ANIM = RawAnimation.begin().thenPlayAndHold("execute");
+	private static final RawAnimation COLLAPSE_ANIM = RawAnimation.begin().thenPlay("collapse");
+	private static final RawAnimation SHADOW_STRIKE_ANIM = RawAnimation.begin().thenPlay("shadow_strike");
+	private static final RawAnimation SHARD_RAIN_ANIM = RawAnimation.begin().thenPlay("shard_rain");
 
 	private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -247,6 +276,16 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private ServerPlayer pendingExecution;
 	private ServerPlayer heldPlayer;
 	private float executionDamage;
+	private float unveilStartHealth;
+
+	// Abyssal Collapse, Shadow Step and Shard Rain
+	private int collapseCooldown;
+	private int shadowStepCooldown;
+	private int shardRainCooldown;
+	private int strikesLeft;
+	private Vec3 stepMark = Vec3.ZERO;
+	private final List<Vec3> shardSpots = new ArrayList<>();
+	private final Set<UUID> shardHits = new HashSet<>();
 
 	// Only set on illusions: the real Watcher they copy, and where around the player they stand
 	private int ownerId = -1;
@@ -361,7 +400,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			return "_dark";
 		}
 		return switch (getAction()) {
-			case PULSE_CHARGE, UNBLINKING -> "_charging";
+			case PULSE_CHARGE, UNBLINKING, COLLAPSE -> "_charging";
 			case PULSE_FLASH, UNBLINKING_FIRE -> "_flash";
 			case STAGGERED -> "";
 			default -> getAction() != NO_ACTION || getPhase() == HUNTING ? "_hunting" : "";
@@ -443,6 +482,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		falseSightCooldown = Math.max(0, falseSightCooldown - 1);
 		rendCooldown = Math.max(0, rendCooldown - 1);
 		unblinkingCooldown = Math.max(0, unblinkingCooldown - 1);
+		collapseCooldown = Math.max(0, collapseCooldown - 1);
+		shadowStepCooldown = Math.max(0, shadowStepCooldown - 1);
+		shardRainCooldown = Math.max(0, shardRainCooldown - 1);
 		creepCooldown = Math.max(0, creepCooldown - 1);
 		freezeCooldown = Math.max(0, freezeCooldown - 1);
 	}
@@ -540,6 +582,12 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		if (graspCooldown == 0 && sees && distance >= 6 && distance <= GRASP_RANGE) {
 			options.add(this::startGrasp);
 		}
+		if (collapseCooldown == 0 && distance <= COLLAPSE_RADIUS - 1) {
+			options.add(this::startCollapse);
+		}
+		if (shadowStepCooldown == 0 && distance >= 4 && distance <= 20) {
+			options.add(() -> startShadowStep(level, target));
+		}
 		if (isUnveiled()) {
 			illusionIds.removeIf(id -> !(level.getEntity(id) instanceof UnderworldWatcher copy) || !copy.isAlive());
 			if (falseSightCooldown == 0 && illusionIds.isEmpty() && distance <= 20) {
@@ -550,6 +598,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			}
 			if (unblinkingCooldown == 0 && sees && distance >= 6 && distance <= 24) {
 				options.add(this::startUnblinking);
+			}
+			if (shardRainCooldown == 0 && distance >= 4 && distance <= 20) {
+				options.add(this::startShardRain);
 			}
 		}
 		if (!options.isEmpty()) {
@@ -563,7 +614,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		freeze();
 		setSprinting(false);
 		// The boss phase leaves shorter gaps between specials
-		specialCooldown = length + (isUnveiled() ? 40 + random.nextInt(40) : 80 + random.nextInt(60));
+		specialCooldown = length + (isUnveiled() ? 30 + random.nextInt(30) : 80 + random.nextInt(60));
 	}
 
 	/** Plays an action animation on the Watcher and on its False Sight copies, so they mimic it. */
@@ -726,6 +777,31 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		animate("unblinking");
 	}
 
+	private void startCollapse() {
+		beginSpecial(COLLAPSE, COLLAPSE_LENGTH);
+		animate("collapse");
+		playSound(ModSounds.WATCHER_COLLAPSE_CHARGE, 3.0F, 1.0F);
+	}
+
+	private void startShadowStep(ServerLevel level, LivingEntity target) {
+		Vec3 mark = shadowMark(level, target, 0.0F);
+		if (mark == null) {
+			shadowStepCooldown = 40;
+			return;
+		}
+		strikesLeft = isUnveiled() ? 3 : 1;
+		beginSpecial(SHADOW_STEP, (STEP_EMERGE_TICK + STRIKE_LENGTH) * strikesLeft);
+		sinkToward(level, mark);
+	}
+
+	private void startShardRain() {
+		beginSpecial(SHARD_RAIN, SHARD_LENGTH);
+		shardSpots.clear();
+		shardHits.clear();
+		animate("shard_rain");
+		playSound(ModSounds.WATCHER_SHARD_CALL, 3.0F, 1.0F);
+	}
+
 	// ---------------------------------------------------------------------------------------------
 	// The Unveiling (boss phase)
 	// ---------------------------------------------------------------------------------------------
@@ -736,6 +812,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	 */
 	private void startUnveiling(ServerLevel level) {
 		endExecution();
+		unveilStartHealth = getHealth();
 		setAction(UNVEILING);
 		actionTicks = 0;
 		freeze();
@@ -757,13 +834,13 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	}
 
 	/**
-	 * After the Unveiling it hits harder (claw damage +40%, Dread Pulse and Grasp +35%), takes less damage (+6
-	 * armor) and moves faster (+10%). Its boss abilities are tuned for this already.
+	 * After the Unveiling it hits harder (claw damage +60%, other attacks +50% through {@link #power}), takes less
+	 * damage (+8 armor) and moves faster (+15%). False Sight, World Rend and Unblinking are tuned for this already.
 	 */
 	private void applyUnveiledPower() {
-		addModifier(Attributes.ATTACK_DAMAGE, 0.4, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
-		addModifier(Attributes.ARMOR, 6.0, AttributeModifier.Operation.ADD_VALUE);
-		addModifier(Attributes.MOVEMENT_SPEED, 0.1, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+		addModifier(Attributes.ATTACK_DAMAGE, 0.6, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+		addModifier(Attributes.ARMOR, 8.0, AttributeModifier.Operation.ADD_VALUE);
+		addModifier(Attributes.MOVEMENT_SPEED, 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
 	}
 
 	private void addModifier(Holder<Attribute> attribute, double amount, AttributeModifier.Operation operation) {
@@ -782,6 +859,16 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			lookAtTarget(target, true);
 		}
 		setUnveilTicks(Math.min(actionTicks, UNVEIL_LENGTH));
+		// It mends while it transforms: the boss bar fills back up to full
+		float progress = Math.min(1.0F, (float) actionTicks / UNVEIL_LENGTH);
+		setHealth(Mth.lerp(progress, unveilStartHealth, getMaxHealth()));
+		if (actionTicks % 2 == 0) {
+			Vec3 core = position().add(0, getBbHeight() * 0.55, 0);
+			double angle = random.nextDouble() * Math.PI * 2;
+			Vec3 from = core.add(Math.cos(angle) * 3, random.nextDouble() * 2 - 1, Math.sin(angle) * 3);
+			Vec3 pull = core.subtract(from).scale(0.12);
+			level.sendParticles(ModParticles.VOID_MOTE, from.x, from.y, from.z, 0, pull.x, pull.y, pull.z, 1.0);
+		}
 		if (actionTicks == UNVEIL_SPLIT_TICK) {
 			playSound(ModSounds.WATCHER_SHATTER, 3.0F, 0.7F);
 			Vec3 eye = getEyePosition();
@@ -819,6 +906,132 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	public void stopSeenByPlayer(ServerPlayer player) {
 		super.stopSeenByPlayer(player);
 		bossEvent.removePlayer(player);
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Abyssal Collapse, Shadow Step and Shard Rain
+	// ---------------------------------------------------------------------------------------------
+
+	/** The warning: a violet ring at the edge of the blast, with motes drawn inward. It pulses faster near the end. */
+	private void collapseRing(ServerLevel level) {
+		if (actionTicks > COLLAPSE_DETONATE_TICK - 10 || actionTicks % 2 == 0) {
+			for (int i = 0; i < 48; i++) {
+				double angle = Math.PI * 2 * i / 48;
+				level.sendParticles(COLLAPSE_RING, getX() + Math.cos(angle) * COLLAPSE_RADIUS, getY() + 0.15,
+						getZ() + Math.sin(angle) * COLLAPSE_RADIUS, 1, 0, 0, 0, 0);
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			double r = 2 + random.nextDouble() * (COLLAPSE_RADIUS - 2);
+			level.sendParticles(ModParticles.VOID_MOTE, getX() + Math.cos(angle) * r, getY() + 0.3, getZ() + Math.sin(angle) * r,
+					0, -Math.cos(angle), 0.05, -Math.sin(angle), 0.25);
+		}
+	}
+
+	/** The implosion: everyone still inside the ring is hurt, withered and thrown out. */
+	private void collapseDetonate(ServerLevel level) {
+		playSound(ModSounds.WATCHER_COLLAPSE_BOOM, 4.0F, 1.0F);
+		Vec3 core = position().add(0, 1.0, 0);
+		level.sendParticles(ModParticles.EYE_LIGHT, core.x, core.y, core.z, 40, 0.5, 0.5, 0.5, 0.4);
+		level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, core.x, core.y, core.z, 1, 0, 0, 0, 0);
+		for (int i = 0; i < 64; i++) {
+			double angle = Math.PI * 2 * i / 64;
+			level.sendParticles(ModParticles.VOID_MOTE, getX(), getY() + 0.3, getZ(), 0, Math.cos(angle), 0.0, Math.sin(angle), 0.8);
+		}
+		for (Player player : level.getEntitiesOfClass(Player.class, getBoundingBox().inflate(COLLAPSE_RADIUS, 3, COLLAPSE_RADIUS))) {
+			if (player.isSpectator() || player.isCreative() || Math.abs(player.getY() - getY()) > 3) {
+				continue;
+			}
+			Vec3 away = player.position().subtract(position()).multiply(1, 0, 1);
+			if (away.length() > COLLAPSE_RADIUS) {
+				continue;
+			}
+			player.hurtServer(level, damageSources().indirectMagic(this, this), power(10.0F));
+			player.addEffect(new MobEffectInstance(MobEffects.WITHER, 60), this);
+			Vec3 push = away.lengthSqr() < 0.01 ? Vec3.directionFromRotation(0, getYRot()) : away.normalize();
+			player.setDeltaMovement(push.x * 0.9, 0.6, push.z * 0.9);
+			player.needsSync = true;
+		}
+	}
+
+	/** A spot about two blocks behind the target (turned by angle degrees around them), with room to stand. */
+	private Vec3 shadowMark(ServerLevel level, LivingEntity target, float angle) {
+		float behind = target.getYRot() + 180.0F + angle;
+		Vec3 point = target.position().add(Vec3.directionFromRotation(0, behind).scale(2.2));
+		return findStandingSpot(level, point, 0.0, 1.0, 10, pos -> pos.distanceTo(target.position()) >= 1.6);
+	}
+
+	/** Sinks into a rift; a whisper sounds where it will step out, so the player can hear it behind them. */
+	private void sinkToward(ServerLevel level, Vec3 mark) {
+		stepMark = mark;
+		animate("rift_out");
+		playSound(ModSounds.WATCHER_RIFT_OUT, 1.5F, 1.4F);
+		level.playSound(null, mark.x, mark.y + 1.5, mark.z, ModSounds.WATCHER_WHISPER, SoundSource.HOSTILE, 1.5F, 1.3F);
+	}
+
+	/** Steps out at the mark, already facing the target, and begins the slash. */
+	private void stepOut(LivingEntity target) {
+		teleportTo(stepMark.x, stepMark.y, stepMark.z);
+		if (target != null) {
+			float yaw = (float) Math.toDegrees(Math.atan2(-(target.getX() - stepMark.x), target.getZ() - stepMark.z));
+			setYRot(yaw);
+			setYBodyRot(yaw);
+			setYHeadRot(yaw);
+		}
+		setAction(SHADOW_STRIKE);
+		actionTicks = 0;
+		animate("shadow_strike");
+		playSound(ModSounds.WATCHER_CLAW_WINDUP, 1.5F, 1.3F);
+	}
+
+	/** One circle under the target and the rest scattered around them, not overlapping. */
+	private void markShardSpots(ServerLevel level, LivingEntity target) {
+		shardSpots.add(target.position());
+		for (int i = 0; i < SHARD_COUNT * 3 && shardSpots.size() < SHARD_COUNT; i++) {
+			Vec3 spot = findStandingSpot(level, target.position(), 2.0, 6.5, 4,
+					pos -> shardSpots.stream().allMatch(other -> other.distanceTo(pos) > 2.4));
+			if (spot != null) {
+				shardSpots.add(spot);
+			}
+		}
+	}
+
+	/** The warning: each circle glows on the ground, and in the last half second shards streak down onto them. */
+	private void shardWarning(ServerLevel level) {
+		boolean falling = actionTicks > SHARD_IMPACT_TICK - 10;
+		for (Vec3 spot : shardSpots) {
+			if (actionTicks % 2 == 0) {
+				for (int i = 0; i < 14; i++) {
+					double angle = Math.PI * 2 * i / 14;
+					level.sendParticles(SHARD_MARK, spot.x + Math.cos(angle) * SHARD_RADIUS, spot.y + 0.1,
+							spot.z + Math.sin(angle) * SHARD_RADIUS, 1, 0, 0, 0, 0);
+				}
+			}
+			if (falling) {
+				level.sendParticles(ModParticles.OBSIDIAN_SHARD, spot.x, spot.y + 6 + random.nextDouble() * 3, spot.z,
+						0, 0, -1, 0, 0.9);
+			}
+		}
+	}
+
+	/** The shards land: damage to anyone standing in a circle (once each), a burst of shards and a crash. */
+	private void shardImpact(ServerLevel level) {
+		for (Vec3 spot : shardSpots) {
+			level.playSound(null, spot.x, spot.y, spot.z, ModSounds.WATCHER_SHARD_IMPACT, SoundSource.HOSTILE, 2.0F, 1.0F);
+			level.sendParticles(ModParticles.OBSIDIAN_SHARD, spot.x, spot.y + 0.3, spot.z, 18, 0.4, 0.2, 0.4, 0.3);
+			level.sendParticles(ParticleTypes.EXPLOSION, spot.x, spot.y + 0.5, spot.z, 1, 0, 0, 0, 0);
+			for (Player player : level.getEntitiesOfClass(Player.class, new AABB(spot, spot).inflate(SHARD_RADIUS, 2.5, SHARD_RADIUS))) {
+				double horizontal = Math.sqrt(Mth.square(player.getX() - spot.x) + Mth.square(player.getZ() - spot.z));
+				if (player.isSpectator() || player.isCreative() || horizontal > SHARD_RADIUS || !shardHits.add(player.getUUID())) {
+					continue;
+				}
+				player.hurtServer(level, damageSources().mobAttack(this), power(8.0F));
+				Vec3 motion = player.getDeltaMovement();
+				player.setDeltaMovement(motion.x, 0.35, motion.z);
+				player.needsSync = true;
+			}
+		}
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -1180,7 +1393,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 				}
 				if (actionTicks >= CLAW_LENGTH) {
 					setAction(NO_ACTION);
-					clawCooldown = isUnveiled() ? 18 : 25;
+					clawCooldown = isUnveiled() ? 14 : 25;
 				}
 			}
 			case RIFT_OUT -> {
@@ -1298,6 +1511,62 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			case STAGGERED -> {
 				if (actionTicks >= STAGGER_LENGTH) {
 					setAction(NO_ACTION);
+				}
+			}
+			case COLLAPSE -> {
+				if (actionTicks < COLLAPSE_DETONATE_TICK) {
+					collapseRing(level);
+				} else if (actionTicks == COLLAPSE_DETONATE_TICK) {
+					collapseDetonate(level);
+				}
+				if (actionTicks >= COLLAPSE_LENGTH) {
+					setAction(NO_ACTION);
+					collapseCooldown = 260 + random.nextInt(60);
+				}
+			}
+			case SHADOW_STEP -> {
+				// The tell: motes and ash gather where it will step out
+				level.sendParticles(ModParticles.VOID_MOTE, stepMark.x, stepMark.y + 0.5, stepMark.z, 2, 0.25, 0.8, 0.25, 0.01);
+				level.sendParticles(ModParticles.WATCHER_ASH, stepMark.x, stepMark.y + 1.5, stepMark.z, 1, 0.3, 0.8, 0.3, 0.01);
+				if (actionTicks >= STEP_EMERGE_TICK) {
+					stepOut(target);
+				}
+			}
+			case SHADOW_STRIKE -> {
+				if (target != null) {
+					lookAtTarget(target, true);
+				}
+				if (actionTicks == STRIKE_HIT_TICK) {
+					clawStrike(level, target);
+				}
+				if (actionTicks >= STRIKE_LENGTH) {
+					Vec3 next = --strikesLeft > 0 && target != null && target.isAlive()
+							? shadowMark(level, target, random.nextBoolean() ? 110.0F : -110.0F) : null;
+					if (next != null) {
+						setAction(SHADOW_STEP);
+						actionTicks = 0;
+						sinkToward(level, next);
+					} else {
+						setAction(NO_ACTION);
+						shadowStepCooldown = 220 + random.nextInt(60);
+						clawCooldown = 15;
+					}
+				}
+			}
+			case SHARD_RAIN -> {
+				if (target != null) {
+					lookAtTarget(target, true);
+				}
+				if (actionTicks == SHARD_MARK_TICK && target != null) {
+					markShardSpots(level, target);
+				} else if (actionTicks > SHARD_MARK_TICK && actionTicks < SHARD_IMPACT_TICK) {
+					shardWarning(level);
+				} else if (actionTicks == SHARD_IMPACT_TICK) {
+					shardImpact(level);
+				}
+				if (actionTicks >= SHARD_LENGTH) {
+					setAction(NO_ACTION);
+					shardRainCooldown = 240 + random.nextInt(60);
 				}
 			}
 			case EXECUTE_APPROACH -> tickExecutionApproach(level);
@@ -1493,7 +1762,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 
 	@Override
 	public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
-		boolean hidden = getAction() == RIFT_OUT && actionTicks >= RIFT_HIDE_TICK;
+		boolean hidden = (getAction() == RIFT_OUT && actionTicks >= RIFT_HIDE_TICK)
+				|| (getAction() == SHADOW_STEP && actionTicks >= STEP_HIDE_TICK);
 		if ((hidden || getAction() == UNVEILING) && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
 			return true;
 		}
@@ -1502,7 +1772,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 
 	@Override
 	public boolean isPickable() {
-		return getAction() != RIFT_OUT && super.isPickable();
+		return getAction() != RIFT_OUT && getAction() != SHADOW_STEP && super.isPickable();
 	}
 
 	@Override
@@ -1568,7 +1838,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	@Override
 	public void aiStep() {
 		super.aiStep();
-		if (level().isClientSide() && !isDeadOrDying() && getAction() != RIFT_OUT) {
+		if (level().isClientSide() && !isDeadOrDying() && getAction() != RIFT_OUT && getAction() != SHADOW_STEP) {
 			spawnAmbientParticles();
 		}
 	}
@@ -1744,7 +2014,10 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 				.triggerableAnim("world_rend", WORLD_REND_ANIM)
 				.triggerableAnim("unblinking", UNBLINKING_ANIM)
 				.triggerableAnim("unblinking_fire", UNBLINKING_FIRE_ANIM)
-				.triggerableAnim("execute", EXECUTE_ANIM));
+				.triggerableAnim("execute", EXECUTE_ANIM)
+				.triggerableAnim("collapse", COLLAPSE_ANIM)
+				.triggerableAnim("shadow_strike", SHADOW_STRIKE_ANIM)
+				.triggerableAnim("shard_rain", SHARD_RAIN_ANIM));
 	}
 
 	@Override

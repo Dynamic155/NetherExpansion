@@ -639,6 +639,46 @@ def animations():
             },
         },
     }
+    # Abyssal Collapse (2.25s): hands spread low as the ring opens, rise and clench as it charges, and slam
+    # together at 1.5s (tick 30) when it implodes
+    a["collapse"] = {
+        "animation_length": 2.25,
+        "bones": {
+            "right_arm": {"rotation": keys((0, [0, 0, 0]), (0.4, [-20, 0, 55]), (1.3, [-150, 0, 40]), (1.4, [-155, 0, 38]),
+                                           (1.5, [-60, 0, -15]), (1.9, [-55, 0, -15]), (2.25, [0, 0, 0]))},
+            "left_arm": {"rotation": keys((0, [0, 0, 0]), (0.4, [-20, 0, -55]), (1.3, [-150, 0, -40]), (1.4, [-155, 0, -38]),
+                                          (1.5, [-60, 0, 15]), (1.9, [-55, 0, 15]), (2.25, [0, 0, 0]))},
+            "chest": {"rotation": keys((0, [0, 0, 0]), (1.3, [-14, 0, 0]), (1.4, [-15, 0, 0]), (1.5, [20, 0, 0]),
+                                       (1.9, [18, 0, 0]), (2.25, [0, 0, 0]))},
+            "head": {"rotation": keys((0, [0, 0, 0]), (1.3, [-20, 0, 0]), (1.5, [15, 0, 0]), (2.25, [0, 0, 0]))},
+            "root": {"position": keys((0, [0, 0, 0]), (1.3, [0, 2, 0]), (1.45, [0, 2.5, 0]), (1.5, [0, -1, 0]), (2.25, [0, 0, 0]))},
+        },
+    }
+    # Shadow Step strike (0.6s): it snaps into existence (0 to 0.1s), cocks the claw, and slashes at 0.3s (tick 6)
+    a["shadow_strike"] = {
+        "animation_length": 0.6,
+        "bones": {
+            "root": {"scale": keys((0, [0.3, 1.4, 0.3]), (0.1, [1, 1, 1]), (0.6, [1, 1, 1]))},
+            "right_arm": {"rotation": keys((0, [30, 0, 35]), (0.2, [40, 0, 35]), (0.3, [-105, -40, -10]),
+                                           (0.45, [-95, -35, -10]), (0.6, [0, 0, 0]))},
+            "chest": {"rotation": keys((0, [0, 25, 0]), (0.2, [-4, 28, 0]), (0.3, [12, -30, 0]), (0.6, [0, 0, 0]))},
+            "head": {"rotation": keys((0, [0, -20, 0]), (0.3, [0, 20, 0]), (0.6, [0, 0, 0]))},
+        },
+    }
+    # Shard Rain (2.5s): both arms raised to the sky, shaking, then flung down as the shards land at 1.5s
+    a["shard_rain"] = {
+        "animation_length": 2.5,
+        "bones": {
+            "right_arm": {"rotation": keys((0, [0, 0, 0]), (0.4, [-175, 0, 20]), (0.6, [-172, 0, 24]), (0.8, [-176, 0, 18]),
+                                           (1.0, [-172, 0, 24]), (1.2, [-176, 0, 18]), (1.5, [-30, 0, 30]),
+                                           (2.0, [-25, 0, 25]), (2.5, [0, 0, 0]))},
+            "left_arm": {"rotation": keys((0, [0, 0, 0]), (0.4, [-175, 0, -20]), (0.6, [-172, 0, -24]), (0.8, [-176, 0, -18]),
+                                          (1.0, [-172, 0, -24]), (1.2, [-176, 0, -18]), (1.5, [-30, 0, -30]),
+                                          (2.0, [-25, 0, -25]), (2.5, [0, 0, 0]))},
+            "head": {"rotation": keys((0, [0, 0, 0]), (0.4, [-40, 0, 0]), (1.4, [-42, 0, 0]), (1.5, [10, 0, 0]), (2.5, [0, 0, 0]))},
+            "chest": {"rotation": keys((0, [0, 0, 0]), (0.4, [-12, 0, 0]), (1.4, [-12, 0, 0]), (1.5, [15, 0, 0]), (2.5, [0, 0, 0]))},
+        },
+    }
     # The execution (3.5s): the right hand lifts the player by the neck while the head tilts, curious, as it
     # did when it first watched them; a final squeeze at 3.2s
     a["execute"] = {
