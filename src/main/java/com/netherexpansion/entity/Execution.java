@@ -88,6 +88,11 @@ public final class Execution {
 		modify(player, Attributes.GRAVITY, false);
 	}
 
+	/** True while a Watcher holds this player. */
+	public static boolean isHeld(ServerPlayer player) {
+		return HELD.contains(player.getUUID());
+	}
+
 	/** The final blow: releases the player and kills them with the execution damage type. */
 	public static void kill(ServerPlayer player, UnderworldWatcher watcher) {
 		release(player);

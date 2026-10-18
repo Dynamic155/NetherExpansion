@@ -6,17 +6,7 @@
 			"entries": [
 				{
 					"type": "minecraft:item",
-					"name": "minecraft:obsidian",
-					"functions": [
-						{
-							"function": "minecraft:set_count",
-							"count": {
-								"type": "minecraft:uniform",
-								"min": 1,
-								"max": 3
-							}
-						}
-					]
+					"name": "netherexpansion:eye_of_the_deep"
 				}
 			]
 		},
@@ -25,7 +15,26 @@
 			"entries": [
 				{
 					"type": "minecraft:item",
-					"name": "minecraft:crying_obsidian"
+					"name": "netherexpansion:umbral_shard",
+					"functions": [
+						{
+							"function": "minecraft:set_count",
+							"count": {
+								"type": "minecraft:uniform",
+								"min": 3,
+								"max": 5
+							}
+						},
+						{
+							"function": "minecraft:enchanted_count_increase",
+							"enchantment": "minecraft:looting",
+							"count": {
+								"type": "minecraft:uniform",
+								"min": 0,
+								"max": 1
+							}
+						}
+					]
 				}
 			],
 			"conditions": [
@@ -34,7 +43,31 @@
 				},
 				{
 					"condition": "minecraft:random_chance",
-					"chance": 0.5
+					"chance": 0.65
+				}
+			]
+		},
+		{
+			"rolls": 1,
+			"entries": [
+				{
+					"type": "minecraft:item",
+					"name": "netherexpansion:watcher_sigil"
+				}
+			],
+			"conditions": [
+				{
+					"condition": "minecraft:killed_by_player"
+				},
+				{
+					"condition": "minecraft:random_chance_with_enchanted_bonus",
+					"enchantment": "minecraft:looting",
+					"unenchanted_chance": 0.2,
+					"enchanted_chance": {
+						"type": "minecraft:linear",
+						"base": 0.25,
+						"per_level_above_first": 0.05
+					}
 				}
 			]
 		}

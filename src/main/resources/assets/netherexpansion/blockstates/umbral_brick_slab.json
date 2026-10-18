@@ -1,0 +1,13 @@
+{
+	"variants": {
+		"type=bottom": {
+			"model": "netherexpansion:block/umbral_brick_slab"
+		},
+		"type=double": {
+			"model": "netherexpansion:block/umbral_bricks"
+		},
+		"type=top": {
+			"model": "netherexpansion:block/umbral_brick_slab_top"
+		}
+	}
+}

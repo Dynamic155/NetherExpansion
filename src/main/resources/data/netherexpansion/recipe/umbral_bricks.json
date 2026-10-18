@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"pattern": [
+		"BBB",
+		"BSB",
+		"BBB"
+	],
+	"key": {
+		"B": "minecraft:polished_blackstone_bricks",
+		"S": "netherexpansion:umbral_shard"
+	},
+	"result": {
+		"id": "netherexpansion:umbral_bricks",
+		"count": 8
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		" N ",
+		"SPS",
+		" S "
+	],
+	"key": {
+		"N": "minecraft:iron_nugget",
+		"S": "netherexpansion:umbral_shard",
+		"P": "minecraft:ender_pearl"
+	},
+	"result": {
+		"id": "netherexpansion:veilstep_charm",
+		"count": 1
+	}
+}

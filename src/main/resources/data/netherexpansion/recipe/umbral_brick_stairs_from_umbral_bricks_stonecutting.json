@@ -1,0 +1,7 @@
+{
+	"type": "minecraft:stonecutting",
+	"ingredient": "netherexpansion:umbral_bricks",
+	"result": {
+		"id": "netherexpansion:umbral_brick_stairs"
+	}
+}

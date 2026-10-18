@@ -1,0 +1,8 @@
+{
+	"type": "minecraft:stonecutting",
+	"ingredient": "netherexpansion:umbral_bricks",
+	"result": {
+		"count": 2,
+		"id": "netherexpansion:umbral_brick_slab"
+	}
+}

@@ -267,7 +267,7 @@ def eye_variant(base, glow, eye_pixels, colors):
 
 
 def read_png(data):
-    """Decodes a non-interlaced 8-bit PNG (RGBA, RGB or palette) into rows of RGBA tuples."""
+    """Decode a PNG into rows of (r, g, b, a). Supports the formats Minecraft textures use."""
     assert data[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
     pos, idat, palette, trns = 8, b"", None, None
     while pos < len(data):
@@ -275,7 +275,7 @@ def read_png(data):
         kind, body = data[pos + 4:pos + 8], data[pos + 8:pos + 8 + length]
         if kind == b"IHDR":
             width, height, depth, color_type, _, _, interlace = struct.unpack(">IIBBBBB", body)
-            assert depth == 8 and interlace == 0, "unsupported PNG"
+            assert interlace == 0, "interlaced PNGs are not supported"
         elif kind == b"PLTE":
             palette = [tuple(body[i:i + 3]) for i in range(0, len(body), 3)]
         elif kind == b"tRNS":
@@ -283,17 +283,21 @@ def read_png(data):
         elif kind == b"IDAT":
             idat += body
         pos += 12 + length
-    channels = {2: 3, 3: 1, 6: 4}[color_type]
-    stride = width * channels
+
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[color_type]
+    bits_per_pixel = channels * depth
+    stride = (width * bits_per_pixel + 7) // 8
+    step = max(1, bits_per_pixel // 8)
     raw = zlib.decompress(idat)
+
     rows, previous = [], bytearray(stride)
     for y in range(height):
         start = y * (stride + 1)
         kind, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
         for i in range(stride):
-            a = line[i - channels] if i >= channels else 0
+            a = line[i - step] if i >= step else 0
             b = previous[i]
-            c = previous[i - channels] if i >= channels else 0
+            c = previous[i - step] if i >= step else 0
             if kind == 1:
                 line[i] = (line[i] + a) & 0xFF
             elif kind == 2:
@@ -305,15 +309,36 @@ def read_png(data):
                 pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
                 line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 0xFF
         previous = line
+
+        if depth < 8:
+            per_byte = 8 // depth
+            mask = (1 << depth) - 1
+            values = [(line[x // per_byte] >> (8 - depth * (x % per_byte + 1))) & mask for x in range(width)]
+        else:
+            values = None
+
         row = []
         for x in range(width):
             if color_type == 3:
-                index = line[x]
-                row.append((*palette[index], trns[index] if trns and index < len(trns) else 255))
+                index = values[x] if values else line[x]
+                alpha = trns[index] if trns and index < len(trns) else 255
+                row.append((*palette[index], alpha))
             elif color_type == 6:
                 row.append(tuple(line[x * 4:x * 4 + 4]))
+            elif color_type == 2:
+                rgb = tuple(line[x * 3:x * 3 + 3])
+                # tRNS names one exact color that is fully transparent.
+                transparent = trns and rgb == (trns[1], trns[3], trns[5])
+                row.append((*rgb, 0 if transparent else 255))
+            elif color_type == 4:
+                g, alpha = line[x * 2], line[x * 2 + 1]
+                row.append((g, g, g, alpha))
             else:
-                row.append((*line[x * 3:x * 3 + 3], 255))
+                sample = values[x] if values else line[x]
+                g = sample * (255 // ((1 << depth) - 1)) if values else sample
+                # tRNS names one exact gray value that is fully transparent.
+                transparent = trns and sample == struct.unpack(">H", trns[:2])[0]
+                row.append((g, g, g, 0 if transparent else 255))
         rows.append(row)
     return rows
 

@@ -1,0 +1,11 @@
+{
+	"replace": false,
+	"values": [
+		"netherexpansion:umbral_bricks",
+		"netherexpansion:umbral_brick_stairs",
+		"netherexpansion:umbral_brick_slab",
+		"netherexpansion:umbral_brick_wall",
+		"netherexpansion:chiseled_umbral_bricks",
+		"netherexpansion:umbral_lantern"
+	]
+}

@@ -45,6 +45,22 @@ to black before the end. You cannot fight back while it holds you, but a friend 
 catches you a second time, nothing will save you. A totem of undying
 still saves you.
 
+### Drops
+
+- **Eye of the Deep** (always): the Watcher's core, and the key to the Underworld.
+- **Umbral Shards** (often): used for the items below.
+- **Watcher Sigil** (rarely): carry it and it warns you, with the mob's name and direction, when something
+  dangerous closes in. It then needs 30 seconds before it can warn again.
+
+### Made with Umbral Shards
+
+- **Veilstep Charm:** blink up to eight blocks where you look, every three seconds.
+- **Umbral Upgrade Smithing Template:** from a netherite upgrade template and four shards. Upgrades netherite
+  gear to Umbral Netherite at a smithing table (one shard per piece), keeping its enchantments. Umbral Netherite is
+  more durable and a little stronger. Each armor piece takes 5% off damage from Underworld creatures, its weapons
+  deal 20% more to them, and the helmet keeps Darkness and Blindness away.
+- **Umbral bricks:** bricks, stairs, slabs, walls, chiseled bricks and a violet lantern.
+
 ## Requirements
 
 - Minecraft 26.3

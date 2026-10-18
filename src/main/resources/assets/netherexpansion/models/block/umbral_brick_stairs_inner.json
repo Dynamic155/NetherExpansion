@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/inner_stairs",
+	"textures": {
+		"bottom": "netherexpansion:block/umbral_bricks",
+		"side": "netherexpansion:block/umbral_bricks",
+		"top": "netherexpansion:block/umbral_bricks"
+	}
+}

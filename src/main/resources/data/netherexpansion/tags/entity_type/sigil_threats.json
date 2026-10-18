@@ -1,0 +1,18 @@
+{
+	"replace": false,
+	"values": [
+		"netherexpansion:underworld_watcher",
+		"minecraft:warden",
+		"minecraft:wither",
+		"minecraft:ravager",
+		"minecraft:piglin_brute",
+		"minecraft:elder_guardian",
+		"minecraft:evoker",
+		"minecraft:vindicator",
+		"minecraft:hoglin",
+		"minecraft:zoglin",
+		"minecraft:breeze",
+		"minecraft:creeper",
+		"minecraft:creaking"
+	]
+}

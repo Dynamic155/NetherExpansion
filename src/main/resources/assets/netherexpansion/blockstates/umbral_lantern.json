@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"hanging=false": {
+			"model": "netherexpansion:block/umbral_lantern"
+		},
+		"hanging=true": {
+			"model": "netherexpansion:block/umbral_lantern_hanging"
+		}
+	}
+}

@@ -1,0 +1,19 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "netherexpansion:umbral_netherite"
+			}
+		],
+		"humanoid_baby": [
+			{
+				"texture": "netherexpansion:umbral_netherite"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "netherexpansion:umbral_netherite"
+			}
+		]
+	}
+}

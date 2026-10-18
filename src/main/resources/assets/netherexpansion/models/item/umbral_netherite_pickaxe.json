@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/handheld",
+	"textures": {
+		"layer0": "netherexpansion:item/umbral_netherite_pickaxe"
+	}
+}

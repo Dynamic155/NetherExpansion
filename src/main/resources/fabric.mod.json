@@ -18,6 +18,7 @@
 		]
 	},
 	"mixins": [
+		"netherexpansion.mixins.json",
 		{
 			"config": "netherexpansion.client.mixins.json",
 			"environment": "client"

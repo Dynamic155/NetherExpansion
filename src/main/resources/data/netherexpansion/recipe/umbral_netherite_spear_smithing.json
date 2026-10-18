@@ -1,0 +1,9 @@
+{
+	"type": "minecraft:smithing_transform",
+	"template": "netherexpansion:umbral_upgrade_smithing_template",
+	"base": "minecraft:netherite_spear",
+	"addition": "netherexpansion:umbral_shard",
+	"result": {
+		"id": "netherexpansion:umbral_netherite_spear"
+	}
+}

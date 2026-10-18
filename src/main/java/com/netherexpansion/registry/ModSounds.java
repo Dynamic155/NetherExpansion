@@ -40,6 +40,7 @@ public final class ModSounds {
 	public static final SoundEvent WATCHER_SHARD_CALL = register("entity.underworld_watcher.shard_call");
 	public static final SoundEvent WATCHER_SHARD_IMPACT = register("entity.underworld_watcher.shard_impact");
 	public static final SoundEvent WATCHER_CONSUME = register("entity.underworld_watcher.consume");
+	public static final SoundEvent SIGIL_WARNING = register("item.watcher_sigil.warning");
 
 	private ModSounds() {
 	}

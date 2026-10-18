@@ -1,0 +1,15 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"key": {
+		"#": "netherexpansion:umbral_shard",
+		"X": "minecraft:iron_nugget"
+	},
+	"pattern": [
+		"XXX",
+		"X#X",
+		"XXX"
+	],
+	"result": {
+		"id": "netherexpansion:umbral_lantern"
+	}
+}

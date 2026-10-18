@@ -1,0 +1,9 @@
+{
+	"replace": false,
+	"values": [
+		"netherexpansion:umbral_netherite_helmet",
+		"netherexpansion:umbral_netherite_chestplate",
+		"netherexpansion:umbral_netherite_leggings",
+		"netherexpansion:umbral_netherite_boots"
+	]
+}

@@ -1,0 +1,11 @@
+{
+	"replace": false,
+	"values": [
+		"netherexpansion:umbral_netherite_sword",
+		"netherexpansion:umbral_netherite_pickaxe",
+		"netherexpansion:umbral_netherite_axe",
+		"netherexpansion:umbral_netherite_shovel",
+		"netherexpansion:umbral_netherite_hoe",
+		"netherexpansion:umbral_netherite_spear"
+	]
+}

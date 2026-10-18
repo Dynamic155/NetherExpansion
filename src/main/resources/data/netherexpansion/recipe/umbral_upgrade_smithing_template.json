@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		" S ",
+		"SNS",
+		" S "
+	],
+	"key": {
+		"S": "netherexpansion:umbral_shard",
+		"N": "minecraft:netherite_upgrade_smithing_template"
+	},
+	"result": {
+		"id": "netherexpansion:umbral_upgrade_smithing_template",
+		"count": 1
+	}
+}

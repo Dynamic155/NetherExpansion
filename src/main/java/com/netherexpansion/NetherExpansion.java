@@ -7,10 +7,13 @@ import net.minecraft.resources.Identifier;
 import com.netherexpansion.entity.Execution;
 import com.netherexpansion.entity.GraspRoots;
 import com.netherexpansion.entity.WatcherSpawner;
+import com.netherexpansion.item.SigilWarnings;
+import com.netherexpansion.registry.ModBlocks;
 import com.netherexpansion.registry.ModEntities;
 import com.netherexpansion.registry.ModItems;
 import com.netherexpansion.registry.ModParticles;
 import com.netherexpansion.registry.ModSounds;
+import com.netherexpansion.registry.ModTabs;
 
 public class NetherExpansion implements ModInitializer {
 	public static final String MOD_ID = "netherexpansion";
@@ -21,6 +24,9 @@ public class NetherExpansion implements ModInitializer {
 		ModParticles.init();
 		ModEntities.init();
 		ModItems.init();
+		ModBlocks.init();
+		ModTabs.init();
+		ServerTickEvents.END_SERVER_TICK.register(SigilWarnings::tick);
 		ServerTickEvents.END_SERVER_TICK.register(WatcherSpawner::tick);
 		ServerTickEvents.END_SERVER_TICK.register(GraspRoots::tick);
 		Execution.init();
