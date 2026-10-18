@@ -146,6 +146,15 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private static final Identifier UNVEILED_POWER = NetherExpansion.id("unveiled_power");
 	private static final float UNVEILED_DAMAGE = 1.5F;
 
+	// Consumed strength: stacks from the effects it strips at the Unveiling, and the combat effects it steals
+	private static final Identifier CONSUMED_POWER = NetherExpansion.id("consumed_power");
+	private static final int MAX_CONSUMED_STACKS = 10;
+	private static final double CONSUMED_DAMAGE_PER_STACK = 0.05;
+	private static final int STOLEN_DURATION_CAP = 600;
+	private static final int STOLEN_AMPLIFIER_CAP = 1;
+	private static final List<Holder<MobEffect>> STOLEN_EFFECTS = List.of(MobEffects.STRENGTH, MobEffects.SPEED,
+			MobEffects.RESISTANCE, MobEffects.REGENERATION, MobEffects.ABSORPTION, MobEffects.HEALTH_BOOST);
+
 	private static final EntityDataAccessor<Integer> DATA_PHASE = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> DATA_ACTION = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> DATA_WATCHED = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.BOOLEAN);
@@ -280,6 +289,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private float unveilStartHealth;
 	/** Players whose effects it consumed at the Unveiling, for the drain particles. */
 	private final List<Integer> drainedPlayers = new ArrayList<>();
+	private int consumedStacks;
 
 	// Abyssal Collapse, Shadow Step and Shard Rain
 	private int collapseCooldown;
@@ -836,6 +846,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			player.connection.send(new ClientboundSetSubtitleTextPacket(Component.translatable("boss.netherexpansion.underworld_watcher.unveiled")));
 			player.connection.send(new ClientboundSetTitleTextPacket(Component.translatable("boss.netherexpansion.underworld_watcher")));
 		}
+		applyConsumedPower();
 	}
 
 	/**
@@ -855,29 +866,54 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		}
 	}
 
+	/** Damage for attacks that don't use the attack damage attribute, scaled by the Unveiling and consumed strength. */
 	private float power(float damage) {
-		return isUnveiled() ? damage * UNVEILED_DAMAGE : damage;
+		float scaled = isUnveiled() ? damage * UNVEILED_DAMAGE : damage;
+		return scaled * (1.0F + consumedStacks * (float) CONSUMED_DAMAGE_PER_STACK);
 	}
 
 	/**
 	 * It consumes the player's strength: every beneficial effect (Strength, Speed, Regeneration, Fire Resistance
-	 * and so on) is stripped away.
+	 * and so on) is stripped away. Each one adds a stack of consumed strength, and combat effects are stolen
+	 * outright (see {@link #STOLEN_EFFECTS}).
 	 */
 	private void consumeBeneficialEffects(ServerLevel level, ServerPlayer player) {
 		if (player.isSpectator() || player.isCreative()) {
 			return;
 		}
-		List<Holder<MobEffect>> taken = player.getActiveEffects().stream()
-				.map(MobEffectInstance::getEffect)
-				.filter(effect -> effect.value().isBeneficial())
+		List<MobEffectInstance> taken = player.getActiveEffects().stream()
+				.filter(instance -> instance.getEffect().value().isBeneficial())
 				.toList();
 		if (taken.isEmpty()) {
 			return;
 		}
-		taken.forEach(player::removeEffect);
+		for (MobEffectInstance instance : taken) {
+			player.removeEffect(instance.getEffect());
+			consumedStacks = Math.min(MAX_CONSUMED_STACKS, consumedStacks + 1);
+			if (STOLEN_EFFECTS.stream().anyMatch(instance::is)) {
+				int duration = instance.isInfiniteDuration() ? STOLEN_DURATION_CAP : Math.min(instance.getDuration(), STOLEN_DURATION_CAP);
+				addEffect(new MobEffectInstance(instance.getEffect(), duration, Math.min(instance.getAmplifier(), STOLEN_AMPLIFIER_CAP)));
+			}
+		}
 		drainedPlayers.add(player.getId());
-		player.sendOverlayMessage(Component.translatable("message.netherexpansion.effects_consumed"));
+		player.sendOverlayMessage(Component.translatable("message.netherexpansion.effects_consumed", taken.size()));
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.WATCHER_CONSUME, SoundSource.HOSTILE, 2.0F, 1.0F);
+	}
+
+	/** Each consumed effect: +5% damage on every attack and +1 armor, up to ten stacks. */
+	private void applyConsumedPower() {
+		if (consumedStacks <= 0) {
+			return;
+		}
+		AttributeInstance damage = getAttribute(Attributes.ATTACK_DAMAGE);
+		if (damage != null) {
+			damage.addOrUpdateTransientModifier(new AttributeModifier(CONSUMED_POWER, consumedStacks * CONSUMED_DAMAGE_PER_STACK,
+					AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+		}
+		AttributeInstance armor = getAttribute(Attributes.ARMOR);
+		if (armor != null) {
+			armor.addOrUpdateTransientModifier(new AttributeModifier(CONSUMED_POWER, consumedStacks, AttributeModifier.Operation.ADD_VALUE));
+		}
 	}
 
 	/** Streams of light pulled out of each drained player into the Watcher's eye. */
@@ -2013,6 +2049,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		output.putInt("Phase", getPhase());
 		output.putFloat("HuntPressure", huntPressure);
 		output.putBoolean("Unveiled", isUnveiled());
+		output.putInt("ConsumedStacks", consumedStacks);
 	}
 
 	@Override
@@ -2025,6 +2062,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			bossEvent.setVisible(true);
 			applyUnveiledPower();
 		}
+		consumedStacks = input.getIntOr("ConsumedStacks", 0);
+		applyConsumedPower();
 	}
 
 	@Override

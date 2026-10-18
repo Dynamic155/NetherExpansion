@@ -37,5 +37,5 @@
 	"subtitles.netherexpansion.entity.underworld_watcher.shard_call": "Underworld Watcher calls down shards",
 	"subtitles.netherexpansion.entity.underworld_watcher.shard_impact": "Shards crash down",
 	"subtitles.netherexpansion.entity.underworld_watcher.consume": "Your strength is drained",
-	"message.netherexpansion.effects_consumed": "The Watcher consumes your strength"
+	"message.netherexpansion.effects_consumed": "The Watcher consumes your strength (%s effects taken)"
 }
