@@ -32,6 +32,9 @@ public final class ModSounds {
 	public static final SoundEvent WATCHER_UNBLINKING_CHARGE = register("entity.underworld_watcher.unblinking_charge");
 	public static final SoundEvent WATCHER_UNBLINKING_FIRE = register("entity.underworld_watcher.unblinking_fire");
 	public static final SoundEvent WATCHER_UNBLINKING_FAIL = register("entity.underworld_watcher.unblinking_fail");
+	public static final SoundEvent WATCHER_GRAB = register("entity.underworld_watcher.grab");
+	public static final SoundEvent WATCHER_EXECUTE = register("entity.underworld_watcher.execute");
+	public static final SoundEvent WATCHER_DEATH_CRACK = register("entity.underworld_watcher.death_crack");
 
 	private ModSounds() {
 	}

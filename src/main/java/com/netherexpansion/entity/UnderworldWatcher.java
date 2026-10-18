@@ -15,11 +15,13 @@ import com.geckolib.animation.RawAnimation;
 import com.geckolib.animation.object.PlayState;
 import com.geckolib.util.GeckoLibUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
@@ -42,6 +44,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -53,14 +58,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
+import com.netherexpansion.NetherExpansion;
 import com.netherexpansion.registry.ModEntities;
+import com.netherexpansion.registry.ModParticles;
 import com.netherexpansion.registry.ModSounds;
 
 /**
@@ -94,6 +100,15 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	public static final int UNBLINKING = 11;
 	public static final int UNBLINKING_FIRE = 12;
 	public static final int STAGGERED = 13;
+	public static final int EXECUTE_APPROACH = 14;
+	public static final int EXECUTE_HOLD = 15;
+
+	// The execution: walk up (giving up after 3s and stepping out of a rift instead), then hold for 3.2s.
+	// The hold stays under 80 ticks, after which a dedicated server would kick a player for floating.
+	public static final int EXECUTE_HOLD_LENGTH = 64;
+	private static final int EXECUTE_APPROACH_TIMEOUT = 60;
+	private static final int EXECUTE_LIFT_TICKS = 24;
+	private static final float EXECUTE_RESCUE_DAMAGE = 20.0F;
 
 	// The Unveiling. The renderer swings the mask open from MASK_START to MASK_START + 20 and splits the eye at SPLIT.
 	public static final int UNVEIL_LENGTH = 80;
@@ -101,6 +116,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	public static final int UNVEIL_SPLIT_TICK = 40;
 	private static final float UNVEIL_HEALTH = 0.35F;
 	private static final byte UNVEIL_EVENT = 100;
+	private static final Identifier UNVEILED_POWER = NetherExpansion.id("unveiled_power");
+	private static final float UNVEILED_DAMAGE = 1.35F;
 
 	private static final EntityDataAccessor<Integer> DATA_PHASE = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> DATA_ACTION = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
@@ -108,6 +125,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	/** Ticks into the Unveiling (0 = still veiled, UNVEIL_LENGTH = fully unveiled). */
 	private static final EntityDataAccessor<Integer> DATA_UNVEIL = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> DATA_ILLUSION = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.BOOLEAN);
+	/** Entity ID of the player being executed (-1 when none), and ticks into the hold, for the client's fade. */
+	private static final EntityDataAccessor<Integer> DATA_HELD = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> DATA_EXECUTE = SynchedEntityData.defineId(UnderworldWatcher.class, EntityDataSerializers.INT);
 
 	// Watching: the player counts as looking at it within about 21 degrees of their view direction
 	private static final double WATCH_CONE = 0.93;
@@ -134,7 +154,10 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private static final int GRASP_SLAM_TICK = 15;
 	private static final int GRASP_ERUPT_TICK = 30;
 	private static final int GRASP_LENGTH = 34;
-	private static final int DEATH_TICKS = 50;
+	private static final int DEATH_TICKS = 90;
+	private static final int DEATH_LIGHT_TICK = 30;
+	private static final int DEATH_SHATTER_TICK = 50;
+	private static final String[] DEATH_FLICKER = {"_flash", "_dark", "_charging", "_hunting", "_flash", "_dark", ""};
 
 	// Dread Pulse: a ground wave that grows 0.75 blocks per tick out to 12 blocks
 	private static final double PULSE_RING_SPEED = 0.75;
@@ -184,6 +207,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private static final RawAnimation WORLD_REND_ANIM = RawAnimation.begin().thenPlay("world_rend");
 	private static final RawAnimation UNBLINKING_ANIM = RawAnimation.begin().thenLoop("unblinking");
 	private static final RawAnimation UNBLINKING_FIRE_ANIM = RawAnimation.begin().thenPlay("unblinking_fire");
+	private static final RawAnimation EXECUTE_ANIM = RawAnimation.begin().thenPlayAndHold("execute");
 
 	private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -219,6 +243,11 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private Vec3 rendEnd = Vec3.ZERO;
 	private final List<Integer> illusionIds = new ArrayList<>();
 
+	// The execution
+	private ServerPlayer pendingExecution;
+	private ServerPlayer heldPlayer;
+	private float executionDamage;
+
 	// Only set on illusions: the real Watcher they copy, and where around the player they stand
 	private int ownerId = -1;
 	private float illusionAngle;
@@ -232,7 +261,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 
 	public static AttributeSupplier.Builder createAttributes() {
 		return Monster.createMonsterAttributes()
-				.add(Attributes.MAX_HEALTH, 100.0)
+				.add(Attributes.MAX_HEALTH, 120.0)
 				.add(Attributes.ATTACK_DAMAGE, 10.0)
 				.add(Attributes.MOVEMENT_SPEED, 0.3)
 				.add(Attributes.FOLLOW_RANGE, 64.0)
@@ -263,6 +292,18 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		builder.define(DATA_WATCHED, false);
 		builder.define(DATA_UNVEIL, 0);
 		builder.define(DATA_ILLUSION, false);
+		builder.define(DATA_HELD, -1);
+		builder.define(DATA_EXECUTE, 0);
+	}
+
+	/** Entity ID of the player it is executing, or -1. */
+	public int getHeldPlayerId() {
+		return entityData.get(DATA_HELD);
+	}
+
+	/** Ticks into the execution hold (0 before it starts). */
+	public int getExecuteTicks() {
+		return entityData.get(DATA_EXECUTE);
 	}
 
 	/** Ticks into the Unveiling: 0 while veiled, UNVEIL_LENGTH once the boss phase has begun. */
@@ -313,6 +354,10 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	 */
 	public String eyeVariant() {
 		if (isDeadOrDying()) {
+			// Flickers through every color while the veil tears, then goes dark when it shatters
+			if (deathTime < DEATH_SHATTER_TICK) {
+				return DEATH_FLICKER[(deathTime / 2 + getId()) % DEATH_FLICKER.length];
+			}
 			return "_dark";
 		}
 		return switch (getAction()) {
@@ -358,6 +403,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		}
 		tickCooldowns();
 		bossEvent.setProgress(getHealth() / getMaxHealth());
+		if (pendingExecution != null) {
+			startExecution();
+		}
 
 		LivingEntity target = getTarget();
 		if (getAction() != NO_ACTION) {
@@ -598,7 +646,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		});
 		creepCooldown = 80 + random.nextInt(60);
 		if (spot != null) {
-			level.sendParticles(ParticleTypes.SMOKE, getX(), getY() + 1.5, getZ(), 12, 0.3, 1.0, 0.3, 0.01);
+			level.sendParticles(ModParticles.WATCHER_ASH, getX(), getY() + 1.5, getZ(), 12, 0.3, 1.0, 0.3, 0.01);
 			teleportTo(spot.x, spot.y, spot.z);
 			getNavigation().stop();
 		}
@@ -687,6 +735,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	 * The world darkens, particles freeze in the air, and the boss bar appears.
 	 */
 	private void startUnveiling(ServerLevel level) {
+		endExecution();
 		setAction(UNVEILING);
 		actionTicks = 0;
 		freeze();
@@ -694,6 +743,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		setPhase(HUNTING);
 		setUnveilTicks(1);
 		setPersistenceRequired();
+		applyUnveiledPower();
 		animate("unveil");
 		playSound(ModSounds.WATCHER_UNVEIL, 4.0F, 1.0F);
 		level.broadcastEntityEvent(this, UNVEIL_EVENT);
@@ -706,6 +756,27 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		}
 	}
 
+	/**
+	 * After the Unveiling it hits harder (claw damage +40%, Dread Pulse and Grasp +35%), takes less damage (+6
+	 * armor) and moves faster (+10%). Its boss abilities are tuned for this already.
+	 */
+	private void applyUnveiledPower() {
+		addModifier(Attributes.ATTACK_DAMAGE, 0.4, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+		addModifier(Attributes.ARMOR, 6.0, AttributeModifier.Operation.ADD_VALUE);
+		addModifier(Attributes.MOVEMENT_SPEED, 0.1, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+	}
+
+	private void addModifier(Holder<Attribute> attribute, double amount, AttributeModifier.Operation operation) {
+		AttributeInstance instance = getAttribute(attribute);
+		if (instance != null) {
+			instance.addOrUpdateTransientModifier(new AttributeModifier(UNVEILED_POWER, amount, operation));
+		}
+	}
+
+	private float power(float damage) {
+		return isUnveiled() ? damage * UNVEILED_DAMAGE : damage;
+	}
+
 	private void tickUnveiling(ServerLevel level, LivingEntity target) {
 		if (target != null) {
 			lookAtTarget(target, true);
@@ -714,7 +785,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		if (actionTicks == UNVEIL_SPLIT_TICK) {
 			playSound(ModSounds.WATCHER_SHATTER, 3.0F, 0.7F);
 			Vec3 eye = getEyePosition();
-			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.OBSIDIAN.defaultBlockState()),
+			level.sendParticles(ModParticles.OBSIDIAN_SHARD,
 					eye.x, eye.y, eye.z, 25, 0.3, 0.3, 0.3, 0.1);
 		}
 		if (actionTicks >= UNVEIL_LENGTH) {
@@ -748,6 +819,149 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	public void stopSeenByPlayer(ServerPlayer player) {
 		super.stopSeenByPlayer(player);
 		bossEvent.removePlayer(player);
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// The execution (see Execution for how the kill is caught)
+	// ---------------------------------------------------------------------------------------------
+
+	/** Whether it can take a player that its attack just would have killed. */
+	public boolean canExecute() {
+		return !isIllusion() && isAlive() && heldPlayer == null && pendingExecution == null && getAction() != UNVEILING;
+	}
+
+	/**
+	 * Called from inside the lethal hit, often in the middle of an attack; the execution starts on its next AI
+	 * step so the attack can finish cleanly. The player is already held and protected.
+	 */
+	public void beginExecution(ServerPlayer player) {
+		pendingExecution = player;
+	}
+
+	private void startExecution() {
+		heldPlayer = pendingExecution;
+		pendingExecution = null;
+		stopAnimating("unblinking");
+		setTarget(heldPlayer);
+		setAction(EXECUTE_APPROACH);
+		actionTicks = 0;
+		executionDamage = 0.0F;
+		setSprinting(false);
+		entityData.set(DATA_HELD, heldPlayer.getId());
+		entityData.set(DATA_EXECUTE, 0);
+	}
+
+	private boolean heldPlayerValid(ServerPlayer player) {
+		return player != null && player.isAlive() && !player.isRemoved() && player.level() == level() && distanceTo(player) < 48;
+	}
+
+	/** It walks up to its victim, unhurried. If it cannot get there in time, it steps out of a rift beside them. */
+	private void tickExecutionApproach(ServerLevel level) {
+		ServerPlayer player = heldPlayer;
+		if (!heldPlayerValid(player)) {
+			endExecution();
+			return;
+		}
+		lookAtTarget(player, true);
+		if (distanceTo(player) <= 2.0) {
+			startHold(level, player);
+			return;
+		}
+		if (actionTicks > EXECUTE_APPROACH_TIMEOUT) {
+			Vec3 spot = findStandingSpot(level, player.position(), 1.2, 2.0, 16, pos -> true);
+			if (spot != null) {
+				level.sendParticles(ModParticles.WATCHER_ASH, getX(), getY() + 1.5, getZ(), 20, 0.3, 1.0, 0.3, 0.02);
+				teleportTo(spot.x, spot.y, spot.z);
+				level.sendParticles(ModParticles.VOID_MOTE, spot.x, spot.y + 1.5, spot.z, 20, 0.3, 1.0, 0.3, 0.02);
+			}
+			startHold(level, player);
+			return;
+		}
+		if (tickCount % 5 == 0 || getNavigation().isDone()) {
+			getNavigation().moveTo(player, 1.0);
+		}
+	}
+
+	/** It faces its victim, takes them by the neck, and the player is turned to look into its eyes. */
+	private void startHold(ServerLevel level, ServerPlayer player) {
+		setAction(EXECUTE_HOLD);
+		actionTicks = 0;
+		freeze();
+		float yaw = (float) Math.toDegrees(Math.atan2(-(player.getX() - getX()), player.getZ() - getZ()));
+		setYRot(yaw);
+		setYBodyRot(yaw);
+		setYHeadRot(yaw);
+		animate("execute");
+		playSound(ModSounds.WATCHER_GRAB, 2.0F, 1.0F);
+		Vec3 grab = position().add(Vec3.directionFromRotation(0, yaw).scale(1.35)).add(0, 1.0, 0);
+		player.connection.teleport(grab.x, grab.y, grab.z, yaw + 180.0F, -25.0F);
+		player.setDeltaMovement(Vec3.ZERO);
+		player.needsSync = true;
+	}
+
+	/** It lifts them slowly while their screen fades (client), then the final squeeze. */
+	private void tickExecutionHold(ServerLevel level) {
+		ServerPlayer player = heldPlayer;
+		if (!heldPlayerValid(player)) {
+			endExecution();
+			return;
+		}
+		entityData.set(DATA_EXECUTE, actionTicks);
+		player.setDeltaMovement(0, actionTicks <= EXECUTE_LIFT_TICKS ? 0.025 : 0.0, 0);
+		player.needsSync = true;
+		if (actionTicks % 4 == 0) {
+			level.sendParticles(ModParticles.WATCHER_EMBER, player.getX(), player.getY() + 1.0, player.getZ(), 2, 0.3, 0.6, 0.3, 0.01);
+			level.sendParticles(ModParticles.VOID_MOTE, player.getX(), player.getY() + 1.4, player.getZ(), 2, 0.3, 0.4, 0.3, 0.01);
+		}
+		if (actionTicks % 12 == 0) {
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.WATCHER_HEARTBEAT, SoundSource.HOSTILE,
+					1.5F, 0.8F + 0.5F * actionTicks / EXECUTE_HOLD_LENGTH);
+		}
+		if (actionTicks >= EXECUTE_HOLD_LENGTH) {
+			playSound(ModSounds.WATCHER_EXECUTE, 2.0F, 1.0F);
+			heldPlayer = null;
+			entityData.set(DATA_HELD, -1);
+			entityData.set(DATA_EXECUTE, 0);
+			Execution.kill(player, this);
+			setAction(NO_ACTION);
+			clawCooldown = 20;
+			specialCooldown = Math.max(specialCooldown, 40);
+		}
+	}
+
+	/** Drops whoever it is holding or about to hold: they survive. */
+	private void endExecution() {
+		boolean wasExecuting = getAction() == EXECUTE_APPROACH || getAction() == EXECUTE_HOLD;
+		for (ServerPlayer player : new ServerPlayer[] {heldPlayer, pendingExecution}) {
+			if (player != null) {
+				Execution.release(player);
+			}
+		}
+		heldPlayer = null;
+		pendingExecution = null;
+		entityData.set(DATA_HELD, -1);
+		entityData.set(DATA_EXECUTE, 0);
+		if (wasExecuting) {
+			stopAnimating("execute");
+			setAction(isAlive() ? STAGGERED : NO_ACTION);
+			actionTicks = 0;
+		}
+	}
+
+	@Override
+	public void die(DamageSource source) {
+		if (!level().isClientSide()) {
+			endExecution();
+		}
+		super.die(source);
+	}
+
+	@Override
+	public void remove(RemovalReason reason) {
+		if (!level().isClientSide()) {
+			endExecution();
+		}
+		super.remove(reason);
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -814,7 +1028,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 
 	private void vanish(ServerLevel level) {
 		level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1.6, getZ(), 20, 0.4, 1.0, 0.4, 0.02);
-		level.sendParticles(ParticleTypes.REVERSE_PORTAL, getX(), getY() + 1.6, getZ(), 15, 0.4, 1.0, 0.4, 0.05);
+		level.sendParticles(ModParticles.VOID_MOTE, getX(), getY() + 1.6, getZ(), 15, 0.4, 1.0, 0.4, 0.05);
 		playSound(ModSounds.WATCHER_ILLUSION_BREAK, 2.0F, 1.0F);
 		discard();
 	}
@@ -915,7 +1129,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			return;
 		}
 		Vec3 eye = getEyePosition();
-		level.sendParticles(ParticleTypes.REVERSE_PORTAL, eye.x, eye.y, eye.z, 4, 0.8, 0.8, 0.8, 0.08);
+		level.sendParticles(ModParticles.EYE_LIGHT, eye.x, eye.y, eye.z, 4, 0.8, 0.8, 0.8, 0.08);
 		if (actionTicks % 15 == 1) {
 			playSound(ModSounds.WATCHER_UNBLINKING_CHARGE, 2.5F, 0.6F + 0.8F * actionTicks / UNBLINKING_CHARGE);
 		}
@@ -953,7 +1167,9 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 
 	private void tickAction(ServerLevel level, LivingEntity target) {
 		actionTicks++;
-		freeze();
+		if (getAction() != EXECUTE_APPROACH) {
+			freeze();
+		}
 		switch (getAction()) {
 			case CLAW -> {
 				if (target != null) {
@@ -970,13 +1186,13 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			case RIFT_OUT -> {
 				if (actionTicks < RIFT_HIDE_TICK) {
 					level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1.6, getZ(), 3, 0.3, 1.0, 0.3, 0.01);
-					level.sendParticles(ParticleTypes.REVERSE_PORTAL, getX(), getY() + 1.6, getZ(), 2, 0.3, 1.0, 0.3, 0.02);
+					level.sendParticles(ModParticles.VOID_MOTE, getX(), getY() + 1.6, getZ(), 2, 0.3, 1.0, 0.3, 0.02);
 				} else if (actionTicks == RIFT_HIDE_TICK) {
 					teleportTo(riftDestination.x, riftDestination.y, riftDestination.z);
 				} else {
 					// The exit telegraph: smoke and embers rising where it will emerge
 					level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.2, getZ(), 2, 0.25, 0.1, 0.25, 0.03);
-					level.sendParticles(new DustParticleOptions(0xFF4A12, 0.8F), getX(), getY() + 0.3, getZ(), 2, 0.3, 0.2, 0.3, 0.0);
+					level.sendParticles(ModParticles.WATCHER_EMBER, getX(), getY() + 0.3, getZ(), 2, 0.3, 0.2, 0.3, 0.0);
 				}
 				if (actionTicks >= RIFT_EMERGE_TICK) {
 					setAction(RIFT_IN);
@@ -1001,7 +1217,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 				}
 				if (actionTicks % 3 == 0) {
 					Vec3 eye = getEyePosition();
-					level.sendParticles(ParticleTypes.REVERSE_PORTAL, eye.x, eye.y, eye.z, 3, 0.4, 0.4, 0.4, 0.05);
+					level.sendParticles(ModParticles.VOID_MOTE, eye.x, eye.y, eye.z, 3, 0.4, 0.4, 0.4, 0.05);
 				}
 				if (actionTicks >= PULSE_FLASH_TICK) {
 					setAction(PULSE_FLASH);
@@ -1084,6 +1300,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 					setAction(NO_ACTION);
 				}
 			}
+			case EXECUTE_APPROACH -> tickExecutionApproach(level);
+			case EXECUTE_HOLD -> tickExecutionHold(level);
 			default -> setAction(NO_ACTION);
 		}
 	}
@@ -1131,7 +1349,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			if (!player.onGround() || Math.abs(player.getY() - getY()) > 2.5 || behindCover(level, player)) {
 				continue;
 			}
-			player.hurtServer(level, damageSources().indirectMagic(this, this), 4.0F);
+			player.hurtServer(level, damageSources().indirectMagic(this, this), power(4.0F));
 			player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 80), this);
 			player.addEffect(new MobEffectInstance(MobEffects.MINING_FATIGUE, 100), this);
 			if (horizontal < 5) {
@@ -1194,7 +1412,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			for (Vec3 zone : graspZones) {
 				double horizontal = Math.sqrt(Mth.square(player.getX() - zone.x) + Mth.square(player.getZ() - zone.z));
 				if (horizontal <= GRASP_ZONE_RADIUS && Math.abs(player.getY() - zone.y) < 2.0) {
-					player.hurtServer(level, damageSources().indirectMagic(this, this), 3.0F);
+					player.hurtServer(level, damageSources().indirectMagic(this, this), power(3.0F));
 					if (player instanceof ServerPlayer serverPlayer) {
 						GraspRoots.root(serverPlayer, ROOT_TICKS);
 					}
@@ -1254,6 +1472,14 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			amount *= 1.5F;
 		}
 		boolean hurt = super.hurtServer(level, source, amount);
+		// Enough damage while it holds someone makes it let go: a teammate can save them
+		if (hurt && (getAction() == EXECUTE_APPROACH || getAction() == EXECUTE_HOLD)) {
+			executionDamage += amount;
+			if (executionDamage >= EXECUTE_RESCUE_DAMAGE) {
+				endExecution();
+				playSound(ModSounds.WATCHER_UNBLINKING_FAIL, 2.5F, 0.8F);
+			}
+		}
 		// Attacking it ends the game of watching
 		if (hurt && getPhase() != HUNTING && source.getEntity() instanceof Player player && !player.isCreative()) {
 			setTarget(player);
@@ -1353,39 +1579,110 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		double y = getY() + random.nextDouble() * getBbHeight();
 		double z = getRandomZ(0.6);
 		if (random.nextFloat() < 0.25F) {
-			level().addParticle(ParticleTypes.SMOKE, x, y, z, 0, 0.01, 0);
+			level().addParticle(ModParticles.WATCHER_ASH, x, y, z, 0, 0.01, 0);
 		}
 		// Copies give off smoke but no embers
 		if (random.nextFloat() < 0.12F && !isIllusion()) {
-			level().addParticle(new DustParticleOptions(0xFF4A12, 0.5F), x, y, z, 0, 0.02, 0);
+			level().addParticle(ModParticles.WATCHER_EMBER, x, y, z, 0, 0.02, 0);
 		}
 		if (random.nextFloat() < 0.08F) {
-			level().addParticle(ParticleTypes.REVERSE_PORTAL, x, y, z, 0, -0.02, 0);
+			level().addParticle(ModParticles.VOID_MOTE, x, y, z, 0, -0.02, 0);
 		}
 	}
 
-	/** Freezes, its eye goes dark, then it breaks into obsidian shards that sink into the ground. */
+	/**
+	 * The death, in four beats (ticks):
+	 * <ol>
+	 * <li>0-30, the veil tears: it spasms and glitches, its eye flickers through every color, light leaks out.</li>
+	 * <li>30-50, it breaks open: arched back, arms wide, cracks of light shoot out of its body.</li>
+	 * <li>50, it shatters: a burst of obsidian shards, embers and light, and a shockwave across the ground. The
+	 * boss bar goes, and the darkness it cast on nearby players lifts.</li>
+	 * <li>50-90, what is left kneels and sinks into the ground under falling ash.</li>
+	 * </ol>
+	 */
 	@Override
 	protected void tickDeath() {
 		deathTime++;
 		if (level().isClientSide()) {
-			if (deathTime > 16) {
-				BlockParticleOption shard = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.OBSIDIAN.defaultBlockState());
-				for (int i = 0; i < 3; i++) {
-					level().addParticle(shard, getRandomX(0.6), getY() + random.nextDouble() * getBbHeight() * 0.8, getRandomZ(0.6), 0, -0.05, 0);
-				}
-				if (random.nextFloat() < 0.4F) {
-					level().addParticle(ParticleTypes.REVERSE_PORTAL, getRandomX(0.6), getY() + 1.0, getRandomZ(0.6), 0, 0, 0);
-				}
-			}
+			deathParticles();
 		} else {
-			if (deathTime == 16) {
-				playSound(ModSounds.WATCHER_SHATTER, 2.0F, 0.8F);
+			deathSounds();
+			if (deathTime == DEATH_SHATTER_TICK) {
+				shatter((ServerLevel) level());
 			}
 			if (deathTime >= DEATH_TICKS && !isRemoved()) {
 				level().broadcastEntityEvent(this, (byte) 60);
 				remove(RemovalReason.KILLED);
 			}
+		}
+	}
+
+	private void deathSounds() {
+		if (deathTime == 10 || deathTime == 20) {
+			playSound(ModSounds.WATCHER_HURT, 2.5F, 0.5F + deathTime * 0.01F);
+		} else if (deathTime == DEATH_LIGHT_TICK) {
+			playSound(ModSounds.WATCHER_DEATH_CRACK, 3.0F, 0.8F);
+		}
+	}
+
+	private void deathParticles() {
+		Vec3 eye = getEyePosition();
+		Vec3 core = position().add(0, getBbHeight() * 0.55, 0);
+		if (deathTime < DEATH_LIGHT_TICK) {
+			// The veil tears: light leaks from the eye, motes spiral off, ash falls away
+			for (int i = 0; i < 2; i++) {
+				level().addParticle(ModParticles.EYE_LIGHT, eye.x, eye.y, eye.z,
+						(random.nextDouble() - 0.5) * 0.3, (random.nextDouble() - 0.3) * 0.2, (random.nextDouble() - 0.5) * 0.3);
+			}
+			double angle = deathTime * 0.6;
+			level().addParticle(ModParticles.VOID_MOTE, core.x + Math.cos(angle) * 0.8, core.y + random.nextDouble(), core.z + Math.sin(angle) * 0.8, 0, 0.02, 0);
+			level().addParticle(ModParticles.WATCHER_ASH, getRandomX(0.6), getY() + random.nextDouble() * getBbHeight(), getRandomZ(0.6), 0, 0, 0);
+		} else if (deathTime < DEATH_SHATTER_TICK) {
+			// It breaks open: three cracks of light shoot out of its body each tick
+			for (int ray = 0; ray < 3; ray++) {
+				Vec3 dir = new Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.3, random.nextDouble() - 0.5).normalize();
+				for (double d = 0.3; d < 1.8; d += 0.5) {
+					Vec3 p = core.add(dir.scale(d));
+					level().addParticle(ModParticles.EYE_LIGHT, p.x, p.y, p.z, dir.x * 0.3, dir.y * 0.3, dir.z * 0.3);
+				}
+			}
+			level().addParticle(ModParticles.OBSIDIAN_SHARD, getRandomX(0.6), getY() + random.nextDouble() * getBbHeight(), getRandomZ(0.6), 0, 0.05, 0);
+		} else if (deathTime == DEATH_SHATTER_TICK) {
+			// The shatter
+			for (int i = 0; i < 70; i++) {
+				Vec3 dir = new Vec3(random.nextDouble() - 0.5, random.nextDouble() * 0.8, random.nextDouble() - 0.5).normalize();
+				level().addParticle(ModParticles.OBSIDIAN_SHARD, core.x, core.y, core.z, dir.x * 0.5, dir.y * 0.5 + 0.1, dir.z * 0.5);
+			}
+			for (int i = 0; i < 40; i++) {
+				Vec3 dir = new Vec3(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).normalize();
+				level().addParticle(ModParticles.WATCHER_EMBER, core.x, core.y, core.z, dir.x * 0.35, dir.y * 0.35, dir.z * 0.35);
+				level().addParticle(ModParticles.EYE_LIGHT, eye.x, eye.y, eye.z, dir.x * 0.6, dir.y * 0.6, dir.z * 0.6);
+			}
+			for (int i = 0; i < 60; i++) {
+				// A ring of void motes rushing outward along the ground
+				double angle = Math.PI * 2 * i / 60;
+				level().addParticle(ModParticles.VOID_MOTE, getX(), getY() + 0.2, getZ(), Math.cos(angle) * 0.7, 0.0, Math.sin(angle) * 0.7);
+			}
+			level().addParticle(ParticleTypes.EXPLOSION_EMITTER, core.x, core.y, core.z, 0, 0, 0);
+		} else {
+			// What is left sinks under falling ash
+			for (int i = 0; i < 2; i++) {
+				level().addParticle(ModParticles.WATCHER_ASH, getRandomX(2.5), getY() + 3.5, getRandomZ(2.5), 0, -0.03, 0);
+			}
+			if (random.nextFloat() < 0.3F) {
+				level().addParticle(ModParticles.OBSIDIAN_SHARD, getRandomX(0.5), getY() + 0.6, getRandomZ(0.5), 0, 0.03, 0);
+			}
+		}
+	}
+
+	/** The shatter, server side: sound, the boss bar ends, and the darkness it cast lifts from nearby players. */
+	private void shatter(ServerLevel level) {
+		playSound(ModSounds.WATCHER_SHATTER, 4.0F, 0.7F);
+		playSound(ModSounds.WATCHER_REND_ERUPT, 3.0F, 1.3F);
+		bossEvent.setVisible(false);
+		for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, getBoundingBox().inflate(48))) {
+			player.removeEffect(MobEffects.DARKNESS);
+			player.removeEffect(MobEffects.BLINDNESS);
 		}
 	}
 
@@ -1409,6 +1706,7 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 		if (input.getBooleanOr("Unveiled", false)) {
 			setUnveilTicks(UNVEIL_LENGTH);
 			bossEvent.setVisible(true);
+			applyUnveiledPower();
 		}
 	}
 
@@ -1445,7 +1743,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 				.triggerableAnim("false_sight", FALSE_SIGHT_ANIM)
 				.triggerableAnim("world_rend", WORLD_REND_ANIM)
 				.triggerableAnim("unblinking", UNBLINKING_ANIM)
-				.triggerableAnim("unblinking_fire", UNBLINKING_FIRE_ANIM));
+				.triggerableAnim("unblinking_fire", UNBLINKING_FIRE_ANIM)
+				.triggerableAnim("execute", EXECUTE_ANIM));
 	}
 
 	@Override

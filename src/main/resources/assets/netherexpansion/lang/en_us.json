@@ -26,5 +26,10 @@
 	"subtitles.netherexpansion.entity.underworld_watcher.unblinking_fire": "Underworld Watcher fires a beam",
 	"subtitles.netherexpansion.entity.underworld_watcher.unblinking_fail": "Underworld Watcher falters",
 	"boss.netherexpansion.underworld_watcher": "THE UNDERWORLD WATCHER",
-	"boss.netherexpansion.underworld_watcher.unveiled": "THE VEIL HAS BEEN BROKEN"
+	"boss.netherexpansion.underworld_watcher.unveiled": "THE VEIL HAS BEEN BROKEN",
+	"subtitles.netherexpansion.entity.underworld_watcher.grab": "Underworld Watcher seizes someone",
+	"subtitles.netherexpansion.entity.underworld_watcher.execute": "Bones crack",
+	"subtitles.netherexpansion.entity.underworld_watcher.death_crack": "Light breaks through the Watcher",
+	"death.attack.netherexpansion.execution": "%1$s was lifted into the dark by %2$s",
+	"death.attack.netherexpansion.execution.player": "%1$s was lifted into the dark by %2$s"
 }

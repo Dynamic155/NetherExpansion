@@ -638,5 +638,89 @@
 				"pitch": 0.6
 			}
 		]
+	},
+	"entity.underworld_watcher.grab": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.grab",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/attack_impact_1",
+				"pitch": 0.55
+			},
+			{
+				"name": "minecraft:mob/warden/attack_impact_2",
+				"pitch": 0.55
+			},
+			{
+				"name": "minecraft:damage/hit1",
+				"pitch": 0.7,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:damage/hit2",
+				"pitch": 0.7,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:damage/hit3",
+				"pitch": 0.7,
+				"volume": 0.8
+			}
+		]
+	},
+	"entity.underworld_watcher.execute": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.execute",
+		"sounds": [
+			{
+				"name": "minecraft:block/bone_block/break1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/bone_block/break2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/bone_block/break3",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/bone_block/break4",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/bone_block/break5",
+				"pitch": 0.5
+			}
+		]
+	},
+	"entity.underworld_watcher.death_crack": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.death_crack",
+		"sounds": [
+			{
+				"name": "minecraft:block/amethyst/resonate1",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate2",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate3",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate4",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:block/sculk_shrieker/shriek1",
+				"pitch": 0.5,
+				"volume": 0.6
+			},
+			{
+				"name": "minecraft:block/sculk_shrieker/shriek2",
+				"pitch": 0.5,
+				"volume": 0.6
+			}
+		]
 	}
 }

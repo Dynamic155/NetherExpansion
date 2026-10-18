@@ -355,6 +355,57 @@ def spawn_egg():
     return out
 
 # ---------------------------------------------------------------------------
+# Particle sprites (8x8). Rows: "." clear, letters index the palette.
+# ---------------------------------------------------------------------------
+
+PARTICLE_SPRITES = {
+    # Black ash flakes: irregular, with a faintly lighter edge
+    "watcher_ash": ({"a": "#141110", "b": "#221d1a", "c": "#3a322c"}, [
+        ["........", "...cb...", "..baab..", "..aaab..", "...aa...", "........", "........", "........"],
+        ["........", "........", ".cbb....", "..aaab..", "...aaa..", "....ab..", "........", "........"],
+        ["........", "....c...", "...ab...", "..aaa...", ".baa....", "..b.....", "........", "........"],
+    ]),
+    # Embers: a hot core that shrinks frame by frame
+    "watcher_ember": ({"a": "#fff0b0", "b": "#ffb040", "c": "#ff6418", "d": "#b8280a"}, [
+        ["........", "...dd...", "..dccd..", ".dcbbcd.", ".dcbacd.", "..dccd..", "...dd...", "........"],
+        ["........", "........", "...cd...", "..cbbd..", "..dbac..", "...dc...", "........", "........"],
+        ["........", "........", "........", "...cb...", "...bc...", "........", "........", "........"],
+        ["........", "........", "........", "...d....", "....c...", "........", "........", "........"],
+    ]),
+    # Void motes: soft violet points that fade out
+    "void_mote": ({"a": "#f4e6ff", "b": "#c48cff", "c": "#7a3ad0", "d": "#3d1a70"}, [
+        ["........", "........", "...cc...", "..cbbc..", "..cbac..", "...cc...", "........", "........"],
+        ["........", "........", "...d....", "..cbc...", "...bad..", "....d...", "........", "........"],
+        ["........", "........", "........", "...cb...", "...dc...", "........", "........", "........"],
+        ["........", "........", "........", "....d...", "...d....", "........", "........", "........"],
+    ]),
+    # Obsidian shards: angular, with a violet glint on one edge
+    "obsidian_shard": ({"a": "#0c0814", "b": "#181028", "c": "#3a2560", "d": "#6a48a8"}, [
+        ["........", "....d...", "...cb...", "..cbb...", "..bba...", ".bbaa...", "..aa....", "........"],
+        ["........", ".dc.....", "..cbb...", "...bbb..", "....baa.", ".....aa.", "........", "........"],
+        ["........", "........", "..dcbb..", ".cbbaa..", "..baaa..", "...a....", "........", "........"],
+    ]),
+    # Eye light: a white-violet spark for the Unveiling and the death
+    "eye_light": ({"a": "#ffffff", "b": "#e8d8ff", "c": "#a070f0"}, [
+        ["...c....", "...b....", "...b....", "cbbabbc.", "...b....", "...b....", "...c....", "........"],
+        ["........", "...c....", "...b....", ".cbabc..", "...b....", "...c....", "........", "........"],
+        ["........", "........", "...c....", "..cac...", "...c....", "........", "........", "........"],
+        ["........", "........", "........", "...b....", "........", "........", "........", "........"],
+    ]),
+}
+
+
+def particle_sprites():
+    for name, (palette, frames) in PARTICLE_SPRITES.items():
+        colors = {k: hex_rgb(v) for k, v in palette.items()}
+        textures = []
+        for i, rows in enumerate(frames):
+            pixels = [[(*colors[ch], 255) if ch != "." else (0, 0, 0, 0) for ch in row] for row in rows]
+            write_png(ASSETS / f"textures/particle/{name}_{i}.png", pixels)
+            textures.append(f"netherexpansion:{name}_{i}")
+        write_json(ASSETS / f"particles/{name}.json", {"textures": textures})
+
+# ---------------------------------------------------------------------------
 # Animations (Bedrock format; positive X rotation pitches forward, the model faces -Z)
 # ---------------------------------------------------------------------------
 
@@ -558,17 +609,49 @@ def animations():
         },
     }
     # Death: freeze, eye goes dark (texture), then slump and sink while shards break off (particles)
+    # Death (4.5s, ticks in brackets): the veil tears with violent spasms (0 to 1.5s, [0-30]), it arches back
+    # with arms flung wide as light breaks out of it (1.5 to 2.5s, [30-50]), shatters at 2.5s [50], then what
+    # is left crumples to its knees and sinks into the ground
     a["death"] = {
-        "loop": "hold_on_last_frame", "animation_length": 2.5,
+        "loop": "hold_on_last_frame", "animation_length": 4.5,
         "bones": {
-            "head": {"rotation": keys((0, [0, 0, 0]), (0.15, [-8, 0, 10]), (0.8, [-8, 0, 10]), (1.6, [30, 0, 18]))},
-            "chest": {"rotation": keys((0, [0, 0, 0]), (0.8, [0, 0, 0]), (1.6, [28, 0, -4]))},
-            "right_arm": {"rotation": keys((0, [0, 0, 0]), (0.8, [0, 0, 0]), (1.6, [12, 0, 10]))},
-            "left_arm": {"rotation": keys((0, [0, 0, 0]), (0.8, [0, 0, 0]), (1.6, [10, 0, -12]))},
+            "head": {"rotation": keys((0, [0, 0, 0]), (0.1, [-25, 0, 15]), (0.25, [10, 0, -20]), (0.4, [-30, 0, 8]),
+                                      (0.6, [5, 0, -25]), (0.8, [-20, 0, 20]), (1.0, [-10, 0, -10]), (1.2, [-28, 0, 12]),
+                                      (1.5, [-40, 0, 0]), (2.5, [-48, 0, 0]), (2.7, [35, 0, 15]), (4.5, [40, 0, 18]))},
+            "chest": {"rotation": keys((0, [0, 0, 0]), (0.15, [-12, 6, 0]), (0.35, [8, -8, 0]), (0.55, [-10, 10, 0]),
+                                       (0.8, [6, -6, 0]), (1.1, [-8, 4, 0]), (1.5, [-25, 0, 0]), (2.5, [-30, 0, 0]),
+                                       (2.7, [30, 0, -6]), (4.5, [35, 0, -8]))},
+            "right_arm": {"rotation": keys((0, [0, 0, 0]), (0.2, [-40, 0, 30]), (0.45, [10, 0, 5]), (0.7, [-60, 0, 40]),
+                                           (1.0, [0, 0, 15]), (1.5, [-20, 0, 80]), (2.5, [-25, 0, 85]),
+                                           (2.7, [15, 0, 10]), (4.5, [20, 0, 12]))},
+            "left_arm": {"rotation": keys((0, [0, 0, 0]), (0.25, [-50, 0, -35]), (0.5, [5, 0, -5]), (0.75, [-45, 0, -45]),
+                                          (1.05, [0, 0, -15]), (1.5, [-20, 0, -80]), (2.5, [-25, 0, -85]),
+                                          (2.7, [12, 0, -12]), (4.5, [18, 0, -14]))},
+            "right_leg": {"rotation": keys((0, [0, 0, 0]), (2.5, [0, 0, 0]), (2.9, [-70, 0, 0]), (4.5, [-75, 0, 0]))},
+            "right_shin": {"rotation": keys((0, [0, 0, 0]), (2.5, [0, 0, 0]), (2.9, [90, 0, 0]), (4.5, [95, 0, 0]))},
+            "left_leg": {"rotation": keys((0, [0, 0, 0]), (2.5, [0, 0, 0]), (2.9, [-70, 0, 0]), (4.5, [-75, 0, 0]))},
+            "left_shin": {"rotation": keys((0, [0, 0, 0]), (2.5, [0, 0, 0]), (2.9, [90, 0, 0]), (4.5, [95, 0, 0]))},
+            "eyes_split": {"scale": keys((0, [1, 1, 1]), (1.5, [1.4, 1.4, 1.4]), (2.5, [2.2, 2.2, 2.2]), (2.55, [0, 0, 0]))},
+            "eye": {"scale": keys((0, [1, 1, 1]), (1.5, [1.4, 1.4, 1.4]), (2.5, [2.2, 2.2, 2.2]), (2.55, [0, 0, 0]))},
             "root": {
-                "position": keys((0, [0, 0, 0]), (0.8, [0, 0, 0]), (2.5, [0, -26, 0])),
-                "scale": keys((0, [1, 1, 1]), (2.0, [1, 1, 1]), (2.5, [0.7, 0.4, 0.7])),
+                "position": keys((0, [0, 0, 0]), (2.5, [0, 0, 0]), (2.9, [0, -10, 0]), (4.5, [0, -34, 0])),
+                "scale": keys((0, [1, 1, 1]), (3.8, [1, 1, 1]), (4.5, [0.6, 0.3, 0.6])),
             },
+        },
+    }
+    # The execution (3.5s): the right hand lifts the player by the neck while the head tilts, curious, as it
+    # did when it first watched them; a final squeeze at 3.2s
+    a["execute"] = {
+        "loop": "hold_on_last_frame", "animation_length": 3.5,
+        "bones": {
+            "right_arm": {"rotation": keys((0, [-80, 0, -8]), (0.3, [-95, 0, -10]), (1.5, [-112, 0, -10]),
+                                           (3.1, [-115, 0, -10]), (3.25, [-118, 0, -6]), (3.5, [-116, 0, -8]))},
+            "right_forearm": {"rotation": keys((0, [-10, 0, 0]), (1.5, [-20, 0, 0]), (3.5, [-20, 0, 0]))},
+            "right_hand": {"rotation": keys((0, [0, 0, 0]), (3.1, [0, 0, 0]), (3.25, [-15, 0, 0]), (3.5, [-12, 0, 0]))},
+            "chest": {"rotation": keys((0, [0, 0, 0]), (1.0, [-6, -10, 0]), (3.5, [-6, -10, 0]))},
+            "head": {"rotation": keys((0, [0, 0, 0]), (1.2, [6, 0, -24]), (3.0, [8, 0, -28]), (3.25, [0, 0, -10]),
+                                      (3.5, [4, 0, -18]))},
+            "left_arm": {"rotation": keys((0, [0, 0, 0]), (1.0, [10, 0, -6]), (3.5, [10, 0, -6]))},
         },
     }
     return {"format_version": "1.8.0", "animations": a}
@@ -594,6 +677,7 @@ def main():
         write_png(ASSETS / f"textures/entity/underworld_watcher{suffix}.png", b)
         write_png(ASSETS / f"textures/entity/underworld_watcher{suffix}_glowmask.png", g)
     write_png(ASSETS / "textures/item/underworld_watcher_spawn_egg.png", spawn_egg())
+    particle_sprites()
     print(f"Wrote model ({len(CUBES)} cubes), animations and {len(EYES)} texture variants to {ASSETS}")
 
 

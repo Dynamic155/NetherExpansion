@@ -21,12 +21,17 @@ Attacks, each with a warning and a counter:
   get behind cover.
 - **Grasp of the Deep:** the ground cracks and glows under you, then tendrils root you. Move off the cracks.
 
-At 35% health it unveils: its mask cracks open, its eye splits in three, and the fight changes.
+At 35% health it unveils: its mask cracks open, its eye splits in three, and the fight changes. From then on it
+hits harder, takes less damage and moves faster.
 
 - **False Sight:** two copies mirror its movement. Only the real one can hurt you, and only the real one has a
   heartbeat.
 - **World Rend:** a glowing crack opens toward you and erupts a moment later.
 - **Unblinking:** it charges a beam while staring at you. Break line of sight to interrupt it and stagger it.
+
+If it lands a killing blow, you do not just die. It walks up to you, lifts you by the neck, and your screen fades
+to black before the end. A friend who hits it hard enough while it holds you makes it let go. A totem of undying
+still saves you.
 
 ## Requirements
 

@@ -44,10 +44,14 @@ public class UnderworldWatcherRenderer<R extends LivingEntityRenderState & GeoRe
 
 	/** Sideways offset in blocks: a jolt when hurt, and a skipped frame every few seconds. */
 	private static float glitchOffset(UnderworldWatcher watcher) {
+		float side = watcher.getId() % 2 == 0 ? 1.0F : -1.0F;
 		if (watcher.isDeadOrDying()) {
+			// Violent glitching while the veil tears, until it shatters
+			if (watcher.deathTime < 50 && (watcher.deathTime + watcher.getId()) % 5 < 2) {
+				return (watcher.deathTime % 2 == 0 ? 0.3F : -0.3F) * side;
+			}
 			return 0.0F;
 		}
-		float side = watcher.getId() % 2 == 0 ? 1.0F : -1.0F;
 		if (watcher.hurtTime > 0 && watcher.hurtTime >= watcher.hurtDuration - 2) {
 			return 0.35F * side;
 		}
