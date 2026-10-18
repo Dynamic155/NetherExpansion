@@ -1,0 +1,642 @@
+{
+	"entity.underworld_watcher.ambient": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.ambient",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/ambient_1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/ambient_2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/ambient_3",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/ambient_4",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/ambient_5",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/ambient_6",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/wither/idle1",
+				"pitch": 0.35,
+				"volume": 0.5
+			},
+			{
+				"name": "minecraft:mob/wither/idle2",
+				"pitch": 0.35,
+				"volume": 0.5
+			}
+		]
+	},
+	"entity.underworld_watcher.whisper": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.whisper",
+		"sounds": [
+			{
+				"name": "minecraft:ambient/nether/soulsand_valley/voices1",
+				"pitch": 0.55,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:ambient/nether/soulsand_valley/voices2",
+				"pitch": 0.55,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:ambient/nether/soulsand_valley/voices3",
+				"pitch": 0.55,
+				"volume": 0.8
+			}
+		]
+	},
+	"entity.underworld_watcher.step": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.step",
+		"sounds": [
+			{
+				"name": "minecraft:block/basalt/step1",
+				"pitch": 0.55,
+				"weight": 2
+			},
+			{
+				"name": "minecraft:block/basalt/step2",
+				"pitch": 0.55,
+				"weight": 2
+			},
+			{
+				"name": "minecraft:block/basalt/step3",
+				"pitch": 0.55,
+				"weight": 2
+			},
+			{
+				"name": "minecraft:block/basalt/step4",
+				"pitch": 0.55,
+				"weight": 2
+			},
+			{
+				"name": "minecraft:block/basalt/step5",
+				"pitch": 0.55,
+				"weight": 2
+			},
+			{
+				"name": "minecraft:block/basalt/step6",
+				"pitch": 0.55,
+				"weight": 2
+			},
+			{
+				"name": "minecraft:block/deepslate/step1",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/deepslate/step2",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/deepslate/step3",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/deepslate/step4",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/deepslate/step5",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/deepslate/step6",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/grindstone/grindstone1",
+				"pitch": 0.35,
+				"volume": 0.35
+			},
+			{
+				"name": "minecraft:block/grindstone/grindstone2",
+				"pitch": 0.35,
+				"volume": 0.35
+			},
+			{
+				"name": "minecraft:block/grindstone/grindstone3",
+				"pitch": 0.35,
+				"volume": 0.35
+			}
+		]
+	},
+	"entity.underworld_watcher.heartbeat": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.heartbeat",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/heartbeat_1",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/warden/heartbeat_2",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/warden/heartbeat_3",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/warden/heartbeat_4",
+				"pitch": 0.7
+			}
+		]
+	},
+	"entity.underworld_watcher.hurt": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.hurt",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/hurt_1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/hurt_2",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/hurt_3",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/hurt_4",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/basalt/break1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/basalt/break2",
+				"pitch": 0.5
+			}
+		]
+	},
+	"entity.underworld_watcher.death": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.death",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/death_1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/death_2",
+				"pitch": 0.5
+			}
+		]
+	},
+	"entity.underworld_watcher.shatter": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.shatter",
+		"sounds": [
+			{
+				"name": "minecraft:block/amethyst_cluster/break1",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break2",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break3",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break4",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:random/glass1",
+				"pitch": 0.5,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:random/glass2",
+				"pitch": 0.5,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:random/glass3",
+				"pitch": 0.5,
+				"volume": 0.8
+			}
+		]
+	},
+	"entity.underworld_watcher.hunt": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.hunt",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/roar_1",
+				"pitch": 0.65
+			},
+			{
+				"name": "minecraft:mob/warden/roar_2",
+				"pitch": 0.65
+			},
+			{
+				"name": "minecraft:mob/warden/roar_3",
+				"pitch": 0.65
+			},
+			{
+				"name": "minecraft:mob/warden/roar_4",
+				"pitch": 0.65
+			},
+			{
+				"name": "minecraft:mob/warden/roar_5",
+				"pitch": 0.65
+			}
+		]
+	},
+	"entity.underworld_watcher.claw_windup": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.claw_windup",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/agitated_1",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/agitated_2",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/agitated_3",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/agitated_4",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/agitated_5",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/agitated_6",
+				"pitch": 0.75
+			}
+		]
+	},
+	"entity.underworld_watcher.claw_hit": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.claw_hit",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/attack_impact_1",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/attack_impact_2",
+				"pitch": 0.75
+			}
+		]
+	},
+	"entity.underworld_watcher.rift_out": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.rift_out",
+		"sounds": [
+			{
+				"name": "minecraft:mob/endermen/portal",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:mob/endermen/portal2",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/deplete1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/deplete2",
+				"pitch": 0.6
+			}
+		]
+	},
+	"entity.underworld_watcher.rift_in": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.rift_in",
+		"sounds": [
+			{
+				"name": "minecraft:mob/endermen/portal",
+				"pitch": 0.35
+			},
+			{
+				"name": "minecraft:mob/endermen/portal2",
+				"pitch": 0.35
+			}
+		]
+	},
+	"entity.underworld_watcher.pulse_charge": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.pulse_charge",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/sonic_charge1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_charge2",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_charge3",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_charge4",
+				"pitch": 0.6
+			}
+		]
+	},
+	"entity.underworld_watcher.pulse_scream": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.pulse_scream",
+		"sounds": [
+			{
+				"name": "minecraft:mob/endermen/scream1",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/endermen/scream2",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/endermen/scream3",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/endermen/scream4",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom1",
+				"pitch": 0.5,
+				"volume": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom2",
+				"pitch": 0.5,
+				"volume": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom3",
+				"pitch": 0.5,
+				"volume": 0.6
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom4",
+				"pitch": 0.5,
+				"volume": 0.6
+			}
+		]
+	},
+	"entity.underworld_watcher.grasp_slam": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.grasp_slam",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/attack_impact_1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/warden/attack_impact_2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/basalt/break1",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/basalt/break2",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/basalt/break3",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/basalt/break4",
+				"pitch": 0.45
+			},
+			{
+				"name": "minecraft:block/basalt/break5",
+				"pitch": 0.45
+			}
+		]
+	},
+	"entity.underworld_watcher.grasp_crack": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.grasp_crack",
+		"sounds": [
+			{
+				"name": "minecraft:block/deepslate/break1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/deepslate/break2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/deepslate/break3",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/deepslate/break4",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/charge1",
+				"pitch": 0.5,
+				"volume": 0.7
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/charge2",
+				"pitch": 0.5,
+				"volume": 0.7
+			},
+			{
+				"name": "minecraft:block/respawn_anchor/charge3",
+				"pitch": 0.5,
+				"volume": 0.7
+			}
+		]
+	},
+	"entity.underworld_watcher.grasp_erupt": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.grasp_erupt",
+		"sounds": [
+			{
+				"name": "minecraft:mob/evocation_illager/fangs",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/sculk/spread1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/sculk/spread2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/sculk/spread3",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/sculk/spread4",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/sculk/spread5",
+				"pitch": 0.5
+			}
+		]
+	},
+	"entity.underworld_watcher.unveil": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.unveil",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/roar_1",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/warden/roar_2",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/warden/roar_3",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/warden/roar_4",
+				"pitch": 0.4
+			},
+			{
+				"name": "minecraft:mob/warden/roar_5",
+				"pitch": 0.4
+			}
+		]
+	},
+	"entity.underworld_watcher.false_sight": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.false_sight",
+		"sounds": [
+			{
+				"name": "minecraft:mob/illusion_illager/mirror_move1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/illusion_illager/mirror_move2",
+				"pitch": 0.6
+			}
+		]
+	},
+	"entity.underworld_watcher.illusion_break": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.illusion_break",
+		"sounds": [
+			{
+				"name": "minecraft:random/glass1",
+				"pitch": 1.3,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:random/glass2",
+				"pitch": 1.3,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:random/glass3",
+				"pitch": 1.3,
+				"volume": 0.8
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break1",
+				"pitch": 0.8
+			},
+			{
+				"name": "minecraft:block/amethyst_cluster/break2",
+				"pitch": 0.8
+			}
+		]
+	},
+	"entity.underworld_watcher.rend_erupt": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.rend_erupt",
+		"sounds": [
+			{
+				"name": "minecraft:random/explode1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:random/explode2",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:random/explode3",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:random/explode4",
+				"pitch": 0.6
+			}
+		]
+	},
+	"entity.underworld_watcher.unblinking_charge": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.unblinking_charge",
+		"sounds": [
+			{
+				"name": "minecraft:block/amethyst/resonate1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate3",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/amethyst/resonate4",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:block/beacon/ambient",
+				"pitch": 0.7,
+				"volume": 0.7
+			}
+		]
+	},
+	"entity.underworld_watcher.unblinking_fire": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.unblinking_fire",
+		"sounds": [
+			{
+				"name": "minecraft:mob/warden/sonic_boom1",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom2",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom3",
+				"pitch": 0.75
+			},
+			{
+				"name": "minecraft:mob/warden/sonic_boom4",
+				"pitch": 0.75
+			}
+		]
+	},
+	"entity.underworld_watcher.unblinking_fail": {
+		"subtitle": "subtitles.netherexpansion.entity.underworld_watcher.unblinking_fail",
+		"sounds": [
+			{
+				"name": "minecraft:block/conduit/deactivate",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:block/beacon/deactivate",
+				"pitch": 0.6
+			}
+		]
+	}
+}

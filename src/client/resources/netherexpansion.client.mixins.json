@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "com.netherexpansion.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"minVersion": "0.8",
+	"client": [
+		"ParticleEngineMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

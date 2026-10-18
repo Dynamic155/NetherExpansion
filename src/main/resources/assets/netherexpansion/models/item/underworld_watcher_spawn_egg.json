@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/generated",
+	"textures": {
+		"layer0": "netherexpansion:item/underworld_watcher_spawn_egg"
+	}
+}

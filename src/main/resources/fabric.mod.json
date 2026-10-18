@@ -1,0 +1,33 @@
+{
+	"schemaVersion": 1,
+	"id": "netherexpansion",
+	"version": "${version}",
+	"name": "Nether Expansion",
+	"description": "New threats and wonders for the Nether, starting with the Underworld Watcher.",
+	"authors": [
+		"Daniel"
+	],
+	"license": "All-Rights-Reserved",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.netherexpansion.NetherExpansion"
+		],
+		"client": [
+			"com.netherexpansion.client.NetherExpansionClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "netherexpansion.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*",
+		"geckolib": ">=5.5.7"
+	}
+}
