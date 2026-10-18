@@ -291,6 +291,8 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 	private ServerPlayer pendingExecution;
 	private ServerPlayer heldPlayer;
 	private float executionDamage;
+	/** Players a teammate has already rescued from it once. */
+	private final Set<UUID> rescuedPlayers = new HashSet<>();
 	/** Where the held player must stay: where they were caught, then the grab point at its hand. */
 	private Vec3 holdAnchor = Vec3.ZERO;
 	private float unveilStartHealth;
@@ -1864,6 +1866,10 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			return false;
 		}
 		boolean bypasses = source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
+		if (heldPlayer != null && source.getEntity() == heldPlayer && !bypasses) {
+			// Whoever it holds by the neck cannot fight back
+			return false;
+		}
 		if (!isUnveiled() && !bypasses) {
 			// It can't be killed before it unveils
 			amount = Math.min(amount, getHealth() - 1.0F);
@@ -1872,10 +1878,13 @@ public class UnderworldWatcher extends Monster implements GeoEntity {
 			amount *= 1.5F;
 		}
 		boolean hurt = super.hurtServer(level, source, amount);
-		// Enough damage while it holds someone makes it let go: a teammate can save them
-		if (hurt && (getAction() == EXECUTE_APPROACH || getAction() == EXECUTE_HOLD)) {
+		// Enough damage from a teammate while it holds someone makes it let go, but only once per player: if it
+		// catches them again, nothing saves them
+		boolean executing = getAction() == EXECUTE_APPROACH || getAction() == EXECUTE_HOLD;
+		if (hurt && executing && heldPlayer != null && !rescuedPlayers.contains(heldPlayer.getUUID())) {
 			executionDamage += amount;
 			if (executionDamage >= EXECUTE_RESCUE_DAMAGE) {
+				rescuedPlayers.add(heldPlayer.getUUID());
 				endExecution();
 				playSound(ModSounds.WATCHER_UNBLINKING_FAIL, 2.5F, 0.8F);
 			}

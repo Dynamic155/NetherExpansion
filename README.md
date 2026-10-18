@@ -41,7 +41,8 @@ attacks more often.
 - **Shadow Step** strikes three times in a row, from different sides.
 
 If it lands a killing blow, you do not just die. It walks up to you, lifts you by the neck, and your screen fades
-to black before the end. A friend who hits it hard enough while it holds you makes it let go. A totem of undying
+to black before the end. You cannot fight back while it holds you, but a friend who hits it hard enough makes it let go, once. If it
+catches you a second time, nothing will save you. A totem of undying
 still saves you.
 
 ## Requirements
